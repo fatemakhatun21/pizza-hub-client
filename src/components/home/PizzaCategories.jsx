@@ -1,5 +1,8 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
+import { motion, useReducedMotion } from "motion/react";
 import { ArrowUpRight } from "lucide-react";
 
 const categories = [
@@ -42,10 +45,11 @@ const categories = [
 ];
 
 export default function PizzaCategories() {
+    const reduceMotion = useReducedMotion();
+
     return (
         <section className="bg-[#FFF8ED] py-20 lg:py-24">
             <div className="mx-auto max-w-7xl px-6 lg:px-8">
-
                 <div className="mb-12 text-center">
                     <span className="text-sm font-bold uppercase tracking-[0.2em] text-[#C93425]">
                         Find Your Favorite
@@ -62,13 +66,27 @@ export default function PizzaCategories() {
                 </div>
 
                 <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                    {categories.map((category) => (
-                        <Link
+                    {categories.map((category, index) => (
+                        <motion.div
                             key={category.slug}
-                            href={`/menu?category=${encodeURIComponent(category.slug)}`}
-                            className="group relative overflow-hidden rounded-[24px] bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl"
+                            initial={
+                                reduceMotion
+                                    ? false
+                                    : { opacity: 0, y: 35 }
+                            }
+                            whileInView={{ opacity: 1, y: 0 }}
+                            viewport={{ once: true, amount: 0.15 }}
+                            transition={{
+                                duration: 0.5,
+                                delay: reduceMotion ? 0 : (index % 3) * 0.1,
+                                ease: "easeOut",
+                            }}
+                            className="group overflow-hidden rounded-[24px] bg-white shadow-sm transition-shadow duration-300 hover:shadow-xl"
                         >
-                            <div className="relative h-64 overflow-hidden">
+                            <Link
+                                href={`/menu?category=${encodeURIComponent(category.slug)}`}
+                                className="relative block h-64 overflow-hidden rounded-[24px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#C93425]"
+                            >
                                 <Image
                                     src={category.image}
                                     alt={category.name}
@@ -92,8 +110,8 @@ export default function PizzaCategories() {
                                         {category.description}
                                     </p>
                                 </div>
-                            </div>
-                        </Link>
+                            </Link>
+                        </motion.div>
                     ))}
                 </div>
             </div>

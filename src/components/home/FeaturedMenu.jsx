@@ -1,6 +1,8 @@
+"use client";
 
 import Image from "next/image";
 import Link from "next/link";
+import { motion, useReducedMotion } from "motion/react";
 import { ArrowRight, MapPin, Store } from "lucide-react";
 
 const featuredPizzas = [
@@ -61,10 +63,11 @@ const featuredPizzas = [
 ];
 
 export default function FeaturedMenu() {
+    const reduceMotion = useReducedMotion();
+
     return (
         <section className="bg-white py-20 lg:py-24">
             <div className="mx-auto max-w-7xl px-6 lg:px-8">
-                {/* Section Header */}
                 <div className="mb-12 text-center">
                     <span className="text-sm font-bold uppercase tracking-widest text-[#C93425]">
                         Fresh From The Oven
@@ -81,10 +84,22 @@ export default function FeaturedMenu() {
                 </div>
 
                 <div className="grid gap-7 sm:grid-cols-2 lg:grid-cols-3">
-                    {featuredPizzas.map((pizza) => (
-                        <div
+                    {featuredPizzas.map((pizza, index) => (
+                        <motion.div
                             key={pizza.id}
-                            className="group overflow-hidden rounded-2xl border border-orange-100 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl"
+                            initial={
+                                reduceMotion
+                                    ? false
+                                    : { opacity: 0, y: 35 }
+                            }
+                            whileInView={{ opacity: 1, y: 0 }}
+                            viewport={{ once: true, amount: 0.15 }}
+                            transition={{
+                                duration: 0.5,
+                                delay: reduceMotion ? 0 : (index % 3) * 0.1,
+                                ease: "easeOut",
+                            }}
+                            className="group overflow-hidden rounded-2xl border border-orange-100 bg-white shadow-sm transition-shadow duration-300 hover:shadow-xl"
                         >
                             <div className="relative h-60 overflow-hidden bg-[#FFF8ED]">
                                 <Image
@@ -131,7 +146,7 @@ export default function FeaturedMenu() {
                                     <ArrowRight size={17} />
                                 </Link>
                             </div>
-                        </div>
+                        </motion.div>
                     ))}
                 </div>
 
