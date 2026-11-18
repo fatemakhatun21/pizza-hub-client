@@ -1,0 +1,351 @@
+"use client";
+
+import { useMemo, useState, useEffect } from "react";
+import Image from "next/image";
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import {
+    Search,
+    SlidersHorizontal,
+    MapPin,
+    Store,
+    ArrowUpRight,
+    Pizza,
+    X,
+} from "lucide-react";
+import { Input } from "@/components/ui/input";
+
+const menuItems = [
+    {
+        id: 1,
+        name: "Classic Pepperoni",
+        category: "Classic Pizzas",
+        price: 14.99,
+        location: "Dhanmondi",
+        vendor: "Pizza Corner",
+        image: "/pizzas/classic-pepperoni.png",
+    },
+    {
+        id: 2,
+        name: "Margherita Pizza",
+        category: "Classic Pizzas",
+        price: 12.99,
+        location: "Gulshan",
+        vendor: "Italian Oven",
+        image: "/pizzas/margherita.png",
+    },
+    {
+        id: 3,
+        name: "Meat Lovers",
+        category: "Meat Lovers",
+        price: 18.99,
+        location: "Banani",
+        vendor: "Firestone Pizza",
+        image: "/pizzas/meat-lovers.png",
+    },
+    {
+        id: 4,
+        name: "Veggie Supreme",
+        category: "Vegetarian Pizzas",
+        price: 13.99,
+        location: "Uttara",
+        vendor: "Green Slice",
+        image: "/pizzas/veggie-supreme.png",
+    },
+    {
+        id: 5,
+        name: "Hawaiian Pizza",
+        category: "Specialty / Gourmet Pizzas",
+        price: 16.99,
+        location: "Mirpur",
+        vendor: "Slice House",
+        image: "/pizzas/hawaiian.png",
+    },
+    {
+        id: 6,
+        name: "Pepperoni Feast",
+        category: "Classic Pizzas",
+        price: 15.99,
+        location: "Mohammadpur",
+        vendor: "Urban Pizza",
+        image: "/pizzas/pepperoni.png",
+    },
+    {
+        id: 7,
+        name: "Crispy Sides Platter",
+        category: "Sides & Appetizers",
+        price: 8.99,
+        location: "Gulshan",
+        vendor: "Italian Oven",
+        image: "/categories/sides-appetizers.png",
+    },
+    {
+        id: 8,
+        name: "Refreshing Drinks & Desserts",
+        category: "Beverages & Desserts",
+        price: 6.99,
+        location: "Dhanmondi",
+        vendor: "Pizza Corner",
+        image: "/categories/beverages-desserts.png",
+    },
+];
+
+const categories = [
+    "All Categories",
+    "Classic Pizzas",
+    "Vegetarian Pizzas",
+    "Meat Lovers",
+    "Specialty / Gourmet Pizzas",
+    "Sides & Appetizers",
+    "Beverages & Desserts",
+];
+
+const locations = [
+    "All Locations",
+    "Dhanmondi",
+    "Gulshan",
+    "Banani",
+    "Uttara",
+    "Mirpur",
+    "Mohammadpur",
+];
+
+export default function BrowseMenuPage() {
+    const searchParams = useSearchParams();
+    const urlCategory = searchParams.get("category");
+
+    const [search, setSearch] = useState("");
+    const [category, setCategory] = useState(
+        categories.includes(urlCategory) ? urlCategory : "All Categories"
+    );
+    const [location, setLocation] = useState("All Locations");
+    const [sort, setSort] = useState("default");
+
+    useEffect(() => {
+        const selectedCategory = categories.includes(urlCategory)
+            ? urlCategory
+            : "All Categories";
+
+        setCategory(selectedCategory);
+    }, [urlCategory]);
+
+    const filteredItems = useMemo(() => {
+        const results = menuItems.filter((item) => {
+            const matchesSearch = item.name
+                .toLowerCase()
+                .includes(search.trim().toLowerCase());
+
+            const matchesCategory =
+                category === "All Categories" ||
+                item.category === category;
+
+            const matchesLocation =
+                location === "All Locations" ||
+                item.location === location;
+
+            return matchesSearch && matchesCategory && matchesLocation;
+        });
+
+        if (sort === "low") {
+            results.sort((a, b) => a.price - b.price);
+        }
+
+        if (sort === "high") {
+            results.sort((a, b) => b.price - a.price);
+        }
+
+        return results;
+    }, [search, category, location, sort]);
+
+    function resetFilters() {
+        setSearch("");
+        setCategory("All Categories");
+        setLocation("All Locations");
+        setSort("default");
+    }
+
+    return (
+        <main className="min-h-screen bg-[#FFF8ED]">
+            <section className="border-b border-orange-100 bg-white py-16 text-center">
+                <div className="mx-auto max-w-7xl px-6">
+                    <span className="text-sm font-bold uppercase tracking-[0.2em] text-[#C93425]">
+                        Fresh Flavors Await
+                    </span>
+
+                    <h1 className="mt-4 text-4xl font-black tracking-tight text-[#25201D] md:text-6xl">
+                        Explore Our <span className="text-[#C93425]">Menu</span>
+                    </h1>
+
+                    <p className="mx-auto mt-5 max-w-2xl text-[#6B625C]">
+                        Discover mouthwatering pizzas, delicious sides, and
+                        refreshing drinks from your favorite local restaurants.
+                    </p>
+                </div>
+            </section>
+
+            <section className="mx-auto max-w-7xl px-6 py-12 lg:px-8">
+                <div className="rounded-3xl border border-orange-100 bg-white p-5 shadow-sm md:p-7">
+                    <div className="mb-5 flex items-center gap-2">
+                        <SlidersHorizontal size={20} className="text-[#C93425]" />
+                        <h2 className="text-lg font-bold text-[#25201D]">
+                            Find Your Favorite
+                        </h2>
+                    </div>
+
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                        <div className="relative">
+                            <Search
+                                size={19}
+                                className="absolute left-4 top-1/2 -translate-y-1/2 text-[#8B817B]"
+                            />
+
+                            <Input
+                                value={search}
+                                onChange={(e) => setSearch(e.target.value)}
+                                placeholder="Search pizzas..."
+                                aria-label="Search menu items"
+                                className="h-12 rounded-xl border-[#EBDCCB] pl-11"
+                            />
+                        </div>
+
+                        <select
+                            value={category}
+                            onChange={(e) => setCategory(e.target.value)}
+                            aria-label="Filter by category"
+                            className="h-12 w-full rounded-xl border border-[#EBDCCB] bg-white px-4 text-sm text-[#25201D]"
+                        >
+                            {categories.map((item) => (
+                                <option key={item} value={item}>
+                                    {item}
+                                </option>
+                            ))}
+                        </select>
+
+                        <select
+                            value={location}
+                            onChange={(e) => setLocation(e.target.value)}
+                            aria-label="Filter by location"
+                            className="h-12 w-full rounded-xl border border-[#EBDCCB] bg-white px-4 text-sm text-[#25201D]"
+                        >
+                            {locations.map((item) => (
+                                <option key={item} value={item}>
+                                    {item}
+                                </option>
+                            ))}
+                        </select>
+
+                        <select
+                            value={sort}
+                            onChange={(e) => setSort(e.target.value)}
+                            aria-label="Sort menu items"
+                            className="h-12 w-full rounded-xl border border-[#EBDCCB] bg-white px-4 text-sm text-[#25201D]"
+                        >
+                            <option value="default">Default Sorting</option>
+                            <option value="low">Price: Low to High</option>
+                            <option value="high">Price: High to Low</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div className="mb-7 mt-10 flex flex-wrap items-center justify-between gap-4">
+                    <p className="font-medium text-[#6B625C]">
+                        Showing{" "}
+                        <span className="font-bold text-[#C93425]">
+                            {filteredItems.length}
+                        </span>{" "}
+                        delicious items
+                    </p>
+
+                    <button
+                        type="button"
+                        onClick={resetFilters}
+                        className="inline-flex items-center gap-2 text-sm font-semibold text-[#C93425] hover:underline"
+                    >
+                        <X size={17} />
+                        Reset Filters
+                    </button>
+                </div>
+
+                {filteredItems.length > 0 ? (
+                    <div className="grid gap-7 sm:grid-cols-2 lg:grid-cols-3">
+                        {filteredItems.map((item) => (
+                            <article
+                                key={item.id}
+                                className="group overflow-hidden rounded-2xl border border-orange-100 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl"
+                            >
+                                <div className="relative h-60 overflow-hidden">
+                                    <Image
+                                        src={item.image}
+                                        alt={item.name}
+                                        fill
+                                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                                        className="object-cover transition-transform duration-500 group-hover:scale-105"
+                                    />
+
+                                    <span className="absolute left-4 top-4 rounded-full bg-white px-3 py-1 text-xs font-semibold text-[#C93425] shadow-sm">
+                                        {item.category}
+                                    </span>
+                                </div>
+
+                                <div className="flex h-[245px] flex-col p-6">
+                                    <div className="flex items-start justify-between gap-3">
+                                        <h3 className="text-xl font-bold text-[#25201D]">
+                                            {item.name}
+                                        </h3>
+
+                                        <span className="whitespace-nowrap text-xl font-black text-[#C93425]">
+                                            ${item.price.toFixed(2)}
+                                        </span>
+                                    </div>
+
+                                    <div className="mt-4 space-y-2 text-sm text-[#6B625C]">
+                                        <p className="flex items-center gap-2">
+                                            <MapPin size={16} className="text-[#C93425]" />
+                                            {item.location}, Dhaka
+                                        </p>
+
+                                        <p className="flex items-center gap-2">
+                                            <Store size={16} className="text-[#C93425]" />
+                                            {item.vendor}
+                                        </p>
+                                    </div>
+
+                                    <Link
+                                        href={`/menu/${item.id}`}
+                                        className="mt-auto flex items-center justify-center gap-2 rounded-full border border-[#C93425] py-3 font-semibold text-[#C93425] transition-colors hover:bg-[#C93425] hover:text-white"
+                                    >
+                                        View Details
+                                        <ArrowUpRight size={18} />
+                                    </Link>
+                                </div>
+                            </article>
+                        ))}
+                    </div>
+                ) : (
+                    <div className="rounded-3xl border border-orange-100 bg-white px-6 py-20 text-center">
+                        <Pizza
+                            size={54}
+                            className="mx-auto text-[#C93425]"
+                            strokeWidth={1.4}
+                        />
+
+                        <h2 className="mt-5 text-2xl font-bold text-[#25201D]">
+                            No menu items found
+                        </h2>
+
+                        <p className="mt-3 text-[#6B625C]">
+                            Try another search or adjust your filters.
+                        </p>
+
+                        <button
+                            onClick={resetFilters}
+                            className="mt-6 rounded-full bg-[#C93425] px-7 py-3 font-semibold text-white hover:bg-[#A7281D]"
+                        >
+                            Clear Filters
+                        </button>
+                    </div>
+                )}
+            </section>
+        </main>
+    );
+}
