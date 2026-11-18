@@ -2,6 +2,7 @@ import Hero from "@/components/home/Hero";
 import FeaturedMenu from "@/components/home/FeaturedMenu";
 import PizzaCategories from "@/components/home/PizzaCategories";
 import WhyChooseUs from "@/components/home/WhyChooseUs";
+import HowItWorks from "@/components/home/HowItWorks";
 
 export default function Home() {
   return (
@@ -10,6 +11,7 @@ export default function Home() {
       <FeaturedMenu />
       <PizzaCategories />
       <WhyChooseUs />
+      <HowItWorks />
     </main>
   );
 }
