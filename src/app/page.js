@@ -1,6 +1,7 @@
 import Hero from "@/components/home/Hero";
 import FeaturedMenu from "@/components/home/FeaturedMenu";
 import PizzaCategories from "@/components/home/PizzaCategories";
+import WhyChooseUs from "@/components/home/WhyChooseUs";
 
 export default function Home() {
   return (
@@ -8,6 +9,7 @@ export default function Home() {
       <Hero />
       <FeaturedMenu />
       <PizzaCategories />
+      <WhyChooseUs />
     </main>
   );
 }
