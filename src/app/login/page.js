@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { authClient } from "@/lib/auth-client";
+import { FcGoogle } from "react-icons/fc";
 import {
     Eye,
     EyeOff,
@@ -51,18 +52,34 @@ export default function LoginPage() {
             });
 
             if (authError) {
-                setError(
-                    authError.message || "Invalid email or password."
-                );
+                setError(authError.message || "Invalid email or password.");
                 return;
             }
 
             router.push("/");
             router.refresh();
         } catch {
-            setError(
-                "Unable to sign in. Please try again."
-            );
+            setError("Unable to sign in. Please try again.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleGoogleLogin = async () => {
+        setError("");
+        setLoading(true);
+
+        try {
+            const { error: authError } = await authClient.signIn.social({
+                provider: "google",
+                callbackURL: "http://localhost:3000/",
+            });
+
+            if (authError) {
+                setError(authError.message || "Google login failed.");
+            }
+        } catch {
+            setError("Unable to connect with Google.");
         } finally {
             setLoading(false);
         }
@@ -107,10 +124,7 @@ export default function LoginPage() {
                     </div>
                 )}
 
-                <form
-                    onSubmit={handleSubmit}
-                    className="space-y-6"
-                >
+                <form onSubmit={handleSubmit} className="space-y-6">
 
                     <div>
                         <label
@@ -168,14 +182,8 @@ export default function LoginPage() {
 
                             <button
                                 type="button"
-                                onClick={() =>
-                                    setShowPassword(!showPassword)
-                                }
-                                aria-label={
-                                    showPassword
-                                        ? "Hide password"
-                                        : "Show password"
-                                }
+                                onClick={() => setShowPassword(!showPassword)}
+                                aria-label={showPassword ? "Hide password" : "Show password"}
                                 className="absolute right-4 top-1/2 -translate-y-1/2 text-[#9A8C82] transition-colors hover:text-[#C93425]"
                             >
                                 {showPassword ? (
@@ -194,10 +202,7 @@ export default function LoginPage() {
                     >
                         {loading ? (
                             <>
-                                <Loader2
-                                    size={19}
-                                    className="animate-spin"
-                                />
+                                <Loader2 size={19} className="animate-spin" />
                                 Signing In...
                             </>
                         ) : (
@@ -208,6 +213,27 @@ export default function LoginPage() {
                         )}
                     </button>
                 </form>
+
+                <div className="my-6 flex items-center gap-4">
+                    <div className="h-px flex-1 bg-gray-200" />
+
+                    <span className="text-sm text-gray-500">
+                        or continue with
+                    </span>
+
+                    <div className="h-px flex-1 bg-gray-200" />
+                </div>
+
+                <button
+                    type="button"
+                    onClick={handleGoogleLogin}
+                    disabled={loading}
+                    className="flex h-12 w-full items-center justify-center gap-3 rounded-full border border-[#EBDCCB] bg-white font-semibold text-[#25201D] transition-colors hover:bg-[#FFF8ED] disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                    <FcGoogle size={22} />
+
+                    Continue with Google
+                </button>
 
                 <p className="mt-8 text-center text-sm text-[#6B625C]">
                     Don&apos;t have an account?{" "}

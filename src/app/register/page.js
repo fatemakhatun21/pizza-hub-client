@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { authClient } from "@/lib/auth-client";
+import { FcGoogle } from "react-icons/fc";
 import {
     Eye,
     EyeOff,
@@ -78,6 +79,25 @@ export default function RegisterPage() {
         }
     };
 
+    const handleGoogleLogin = async () => {
+        setError("");
+        setLoading(true);
+
+        try {
+            const { error: authError } = await authClient.signIn.social({
+                provider: "google",
+                callbackURL: "http://localhost:3000/",
+            });
+
+            if (authError) {
+                setError(authError.message || "Google sign up failed.");
+            }
+        } catch {
+            setError("Unable to connect with Google.");
+        } finally {
+            setLoading(false);
+        }
+    };
     return (
         <main className="flex min-h-screen items-center justify-center bg-[#FFF8ED] px-4 py-14">
             <div className="w-full max-w-[480px] rounded-[28px] border border-orange-100 bg-white p-7 shadow-xl shadow-orange-950/5 sm:p-10">
@@ -283,6 +303,23 @@ export default function RegisterPage() {
                     </button>
                 </form>
 
+                <div className="my-6 flex items-center gap-4">
+                    <div className="h-px flex-1 bg-gray-200" />
+                    <span className="text-sm text-gray-500">
+                        or continue with
+                    </span>
+                    <div className="h-px flex-1 bg-gray-200" />
+                </div>
+
+                <button
+                    type="button"
+                    onClick={handleGoogleLogin}
+                    disabled={loading}
+                    className="flex h-12 w-full items-center justify-center gap-3 rounded-full border border-[#EBDCCB] bg-white font-semibold text-[#25201D] transition-colors hover:bg-[#FFF8ED] disabled:opacity-60"
+                >
+                    <FcGoogle size={22} />
+                    Continue with Google
+                </button>
                 <p className="mt-8 text-center text-sm text-[#6B625C]">
                     Already have an account?{" "}
                     <Link
