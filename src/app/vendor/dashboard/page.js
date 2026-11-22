@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Pencil, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { authClient } from "@/lib/auth-client";
 import {
@@ -122,6 +123,32 @@ export default function VendorDashboard() {
         },
     ];
 
+    const handleDelete = async (id) => {
+        if (!window.confirm("Are you sure you want to delete this pizza?")) {
+            return;
+        }
+
+        try {
+            const response = await fetch(
+                `http://localhost:5000/api/menu/${id}`,
+                {
+                    method: "DELETE",
+                    credentials: "include",
+                }
+            );
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.message || "Failed to delete pizza");
+            }
+
+            setPizzas((prev) => prev.filter((pizza) => pizza._id !== id));
+        } catch (err) {
+            setError(err.message);
+        }
+    };
+
     return (
         <main className="min-h-screen bg-[#FFF8ED] px-5 py-12">
             <div className="mx-auto max-w-7xl">
@@ -225,6 +252,7 @@ export default function VendorDashboard() {
                                                 <th className="p-4">Price</th>
                                                 <th className="p-4">Status</th>
                                                 <th className="p-4">Visibility</th>
+                                                <th className="p-4">Actions</th>
                                             </tr>
                                         </thead>
 
@@ -252,6 +280,27 @@ export default function VendorDashboard() {
                                                         {pizza.isActive
                                                             ? "Active"
                                                             : "Inactive"}
+                                                    </td>
+
+                                                    <td className="p-4">
+                                                        <div className="flex gap-3">
+                                                            <Link
+                                                                href={`/vendor/edit-pizza/${pizza._id}`}
+                                                                className="inline-flex items-center gap-1 text-blue-600"
+                                                            >
+                                                                <Pencil size={16} />
+                                                                Edit
+                                                            </Link>
+
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleDelete(pizza._id)}
+                                                                className="inline-flex items-center gap-1 text-red-600"
+                                                            >
+                                                                <Trash2 size={16} />
+                                                                Delete
+                                                            </button>
+                                                        </div>
                                                     </td>
                                                 </tr>
                                             ))}
