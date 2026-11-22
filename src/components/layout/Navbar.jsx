@@ -11,7 +11,6 @@ const navLinks = [
     { label: "Home", href: "/" },
     { label: "Browse Menu", href: "/menu" },
 ];
-
 export default function Navbar() {
     const router = useRouter();
 
@@ -91,12 +90,15 @@ export default function Navbar() {
                         />
                     ) : user ? (
                         <>
-                            <div className="flex items-center gap-2 rounded-full bg-[#FFF8ED] px-4 py-2 text-sm font-semibold text-[#25201D]">
+                            <Link
+                                href="/profile"
+                                className="flex items-center gap-2 rounded-full bg-[#FFF8ED] px-4 py-2 text-sm font-semibold text-[#25201D] transition-colors hover:bg-orange-100 hover:text-[#C93425]"
+                            >
                                 <UserRound size={18} className="text-[#C93425]" />
                                 <span className="max-w-36 truncate">
                                     {user.name || "My Account"}
                                 </span>
-                            </div>
+                            </Link>
 
                             <button
                                 type="button"
@@ -177,10 +179,14 @@ export default function Navbar() {
                                 </div>
                             ) : user ? (
                                 <div className="flex flex-col gap-4">
-                                    <div className="flex items-center gap-3 font-semibold text-[#25201D]">
+                                    <Link
+                                        href="/profile"
+                                        onClick={closeMenu}
+                                        className="flex items-center gap-3 font-semibold text-[#25201D] hover:text-[#C93425]"
+                                    >
                                         <UserRound size={20} className="text-[#C93425]" />
                                         <span>{user.name || "My Account"}</span>
-                                    </div>
+                                    </Link>
 
                                     <button
                                         type="button"
