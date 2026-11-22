@@ -350,3 +350,94 @@
 .dark [class~="text-blue-600"] {
   color: var(--ph-info);
 }
+
+/* ---------------------------------------------------------------------------
+   Navbar dark palette.
+
+   Light mode and Navbar.jsx stay exactly as they are. These rules only
+   retint the utility classes the header already uses when .dark is set.
+   --------------------------------------------------------------------------- */
+.dark header {
+  --ph-nav-bg: #1c1918;
+  --ph-nav-text: #e8ded8;
+  --ph-nav-active-bg: #a83b2f;
+  --ph-nav-active-text: #ffffff;
+  --ph-nav-hover-bg: #322624;
+  --ph-nav-accent: #e76b50;
+  --ph-nav-dropdown: #25201e;
+  --ph-nav-dropdown-text: #f5f0ea;
+  --ph-nav-border: #40332f;
+}
+
+.dark header[class~="bg-white/95"],
+.dark header [class~="bg-white"] {
+  background-color: var(--ph-nav-bg);
+}
+
+.dark header[class~="border-[#F1E5D9]"],
+.dark header [class~="border-[#F1E5D9]"],
+.dark header [class~="border-[#EEDFD2]"],
+.dark header [class~="border-orange-100"] {
+  border-color: var(--ph-nav-border);
+}
+
+/* Active page: strong red fill with white text. */
+.dark header a[class~="bg-[#FDE9E5]"],
+.dark header a[aria-current="page"] {
+  background-color: var(--ph-nav-active-bg);
+  color: var(--ph-nav-active-text);
+}
+
+/* Inactive links stay warm off-white; hover uses the requested hover fill. */
+.dark header a[class~="text-[#352C27]"] {
+  color: var(--ph-nav-text);
+}
+
+.dark header a[class~="hover:bg-[#FFF3EB]"]:hover,
+.dark header a[class~="hover:bg-[#FFF8ED]"]:hover,
+.dark header [role="menu"] button[class~="hover:bg-red-50"]:hover {
+  background-color: var(--ph-nav-hover-bg);
+}
+
+.dark header a[class~="hover:text-[#C93425]"]:hover {
+  color: var(--ph-nav-accent);
+}
+
+/* Brand accent and icons. The active link keeps its white text. */
+.dark header [class~="text-[#C93425]"]:not([class~="bg-[#FDE9E5]"]) {
+  color: var(--ph-nav-accent);
+}
+
+.dark header [class~="border-[#C93425]"] {
+  border-color: var(--ph-nav-accent);
+}
+
+.dark header [class~="text-[#25201D]"],
+.dark header [class~="text-[#6B625C]"] {
+  color: var(--ph-nav-text);
+}
+
+/* Profile trigger and compact controls. */
+.dark header [class~="bg-[#FFF8ED]"] {
+  background-color: var(--ph-nav-dropdown);
+}
+
+/* Profile dropdown. */
+.dark header [role="menu"] {
+  background-color: var(--ph-nav-dropdown);
+  border-color: var(--ph-nav-border);
+  color: var(--ph-nav-dropdown-text);
+}
+
+.dark header [role="menu"] [class~="text-[#25201D]"],
+.dark header [role="menu"] [class~="text-gray-500"] {
+  color: var(--ph-nav-dropdown-text);
+}
+
+.dark header [role="menu"] [class~="text-[#C93425]"] {
+  color: var(--ph-nav-accent);
+}
+
+.dark header [role="menu"] [class~="border-orange-100"] {
+  border-color: var(--ph-nav-border);
+}

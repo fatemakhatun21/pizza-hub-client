@@ -1,4 +1,3 @@
-
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -11,8 +10,6 @@ import {
 
 import { FaFacebookF, FaInstagram } from "react-icons/fa";
 import { FaXTwitter } from "react-icons/fa6";
-
-import ThemeToggle from "@/components/theme/ThemeToggle";
 
 const quickLinks = [
     { label: "Home", href: "/" },
@@ -168,8 +165,6 @@ export default function Footer() {
                             />
                             for pizza lovers
                         </p>
-
-                        <ThemeToggle />
                     </div>
                 </div>
             </div>

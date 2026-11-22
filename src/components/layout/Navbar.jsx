@@ -19,6 +19,7 @@ import {
 import { toast } from "sonner";
 import { authClient } from "@/lib/auth-client";
 import { apiFetch } from "@/lib/api";
+import ThemeToggle from "@/components/theme/ThemeToggle";
 
 export default function Navbar() {
     const router = useRouter();
@@ -202,6 +203,8 @@ export default function Navbar() {
     return (
         <header className="sticky top-0 z-50 border-b border-[#F1E5D9] bg-white/95 backdrop-blur-xl">
             <nav className="mx-auto flex h-[76px] max-w-7xl items-center justify-between gap-3 px-4 min-[500px]:gap-5 min-[960px]:px-5 xl:px-8">
+
+                {/* Logo */}
                 <Link
                     href="/"
                     onClick={closeMenus}
@@ -224,7 +227,7 @@ export default function Navbar() {
                     </span>
                 </Link>
 
-                <div className="hidden min-w-0 flex-1 items-center justify-center gap-1 min-[800px]:flex xl:gap-2">
+                <div className="hidden min-w-0 flex-1 items-center justify-center gap-1 lg:flex xl:gap-2">
                     {links.map((link) => (
                         <Link
                             key={link.href}
@@ -240,7 +243,10 @@ export default function Navbar() {
                     ))}
                 </div>
 
-                <div className="hidden shrink-0 items-center min-[960px]:flex">
+                <div className="hidden shrink-0 items-center gap-3 lg:flex">
+
+                    <ThemeToggle />
+
                     {isPending ? (
                         <Loader2
                             size={22}
@@ -377,7 +383,11 @@ export default function Navbar() {
                     )}
                 </div>
 
-                <div className="flex shrink-0 items-center gap-2 min-[960px]:hidden">
+                {/* Mobile Right Side */}
+                <div className="flex shrink-0 items-center gap-2 lg:hidden">
+
+                    <ThemeToggle />
+
                     {!isPending && user && (
                         <Link
                             href="/profile"
@@ -413,7 +423,7 @@ export default function Navbar() {
             {mobileOpen && (
                 <div
                     id="mobile-navigation"
-                    className="border-t border-[#F1E5D9] bg-white px-4 py-4 shadow-lg min-[960px]:hidden"
+                    className="border-t border-[#F1E5D9] bg-white px-4 py-4 shadow-lg lg:hidden"
                 >
                     <div className="mx-auto flex max-w-7xl flex-col gap-1">
                         {links.map((link) => (

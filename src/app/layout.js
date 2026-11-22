@@ -33,7 +33,7 @@ export default function RootLayout({ children }) {
       <head>
         <script
           dangerouslySetInnerHTML={{
-            __html: `!function(){try{var t=localStorage.getItem("pizzahub-theme");var d=t?t==="dark":window.matchMedia("(prefers-color-scheme: dark)").matches;d&&document.documentElement.classList.add("dark")}catch(e){}}();`,
+            __html: `!function(){try{if(localStorage.getItem("pizzahub-theme")==="dark"){document.documentElement.classList.add("dark")}}catch(e){}}();`,
           }}
         />
       </head>
