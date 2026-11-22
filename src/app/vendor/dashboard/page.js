@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Pencil, Trash2 } from "lucide-react";
+import PremiumUpgrade from "@/components/vendor/PremiumUpgrade";
 import Link from "next/link";
 import { authClient } from "@/lib/auth-client";
 import {
@@ -214,6 +215,10 @@ export default function VendorDashboard() {
                                     </div>
                                 );
                             })}
+                            
+                        </div>
+                        <div className="mb-8">
+                            <PremiumUpgrade />
                         </div>
 
                         <section className="rounded-2xl border border-orange-100 bg-white p-6 shadow-sm">
