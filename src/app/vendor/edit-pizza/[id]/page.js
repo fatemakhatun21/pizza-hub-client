@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { authClient } from "@/lib/auth-client";
+import ImageUpload from "@/components/vendor/ImageUpload";
 import { ArrowLeft, Loader2, Save } from "lucide-react";
 
 const API_URL = "http://localhost:5000";
@@ -163,7 +164,6 @@ export default function EditPizzaPage() {
         { name: "name", label: "Pizza Name", type: "text" },
         { name: "price", label: "Price ($)", type: "number" },
         { name: "location", label: "Location", type: "text" },
-        { name: "image", label: "Image URL", type: "text" },
     ];
 
     return (
@@ -251,6 +251,12 @@ export default function EditPizzaPage() {
                                 className="w-full rounded-xl border border-gray-200 p-3 outline-none focus:border-[#C93425]"
                             />
                         </div>
+                        <ImageUpload
+                            value={form.image}
+                            onChange={(url) =>
+                                setForm((prev) => ({ ...prev, image: url }))
+                            }
+                        />
 
                         <button
                             type="submit"

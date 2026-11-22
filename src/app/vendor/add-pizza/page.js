@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { authClient } from "@/lib/auth-client";
+import ImageUpload from "@/components/vendor/ImageUpload";
 import { ArrowLeft, Loader2, Pizza } from "lucide-react";
 
 const initialForm = {
@@ -219,23 +220,12 @@ export default function AddPizzaPage() {
                             />
                         </div>
 
-                        <div>
-                            <label htmlFor="image" className="mb-2 block font-semibold">
-                                Pizza Image URL
-                            </label>
-                            <input
-                                id="image"
-                                name="image"
-                                value={form.image}
-                                onChange={handleChange}
-                                placeholder="https://example.com/pizza.jpg"
-                                required
-                                className="w-full rounded-xl border border-gray-200 p-3 outline-none focus:border-[#C93425]"
-                            />
-                            <p className="mt-2 text-xs text-gray-500">
-                                Image upload with ImgBB will be added separately.
-                            </p>
-                        </div>
+                        <ImageUpload
+                            value={form.image}
+                            onChange={(url) =>
+                                setForm((prev) => ({ ...prev, image: url }))
+                            }
+                        />
 
                         <button
                             type="submit"
