@@ -68,10 +68,36 @@ export default function RegisterPage() {
                 return;
             }
 
+
+            if (form.role === "vendor") {
+                const response = await fetch(
+                    "http://localhost:5000/api/vendor/register",
+                    {
+                        method: "POST",
+                        credentials: "include",
+                    }
+                );
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    setError(
+                        data.message ||
+                        "Account created, but vendor activation failed."
+                    );
+                    return;
+                }
+            }
+
             setSuccess("Account created successfully!");
 
-            router.push("/");
+            router.push(
+                form.role === "vendor"
+                    ? "/vendor/dashboard"
+                    : "/"
+            );
             router.refresh();
+
         } catch {
             setError("Something went wrong. Please try again.");
         } finally {
