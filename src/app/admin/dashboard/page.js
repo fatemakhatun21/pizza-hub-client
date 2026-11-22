@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { Users } from "lucide-react";
 import { authClient } from "@/lib/auth-client";
 import {
     CheckCircle2,
@@ -157,6 +158,13 @@ export default function AdminDashboard() {
                         <RefreshCw size={17} />
                         Refresh
                     </button>
+                    <Link
+                        href="/admin/users"
+                        className="inline-flex items-center gap-2 rounded-full bg-[#C93425] px-5 py-2 font-semibold text-white"
+                    >
+                        <Users size={18} />
+                        Manage Users
+                    </Link>
                 </div>
 
                 {error && (

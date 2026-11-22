@@ -174,6 +174,13 @@ export default function VendorDashboard() {
                         <Plus size={20} />
                         Add New Pizza
                     </Link>
+                    <Link
+                        href="/vendor/orders"
+                        className="inline-flex items-center gap-2 rounded-full border border-[#C93425] px-6 py-3 font-semibold text-[#C93425]"
+                    >
+                        <ShoppingBag size={19} />
+                        Manage Orders
+                    </Link>
                 </div>
 
                 {error && (
