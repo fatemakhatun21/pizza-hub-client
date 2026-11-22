@@ -1,10 +1,11 @@
-
 "use client";
 
 import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { authClient } from "@/lib/auth-client";
+import { apiFetch, readApiError } from "@/lib/api";
+import { toast } from "sonner";
 import { ArrowLeft, Loader2, ShoppingBag } from "lucide-react";
 
 export default function OrderPage() {
@@ -27,35 +28,31 @@ export default function OrderPage() {
         setLoading(true);
 
         try {
-            const response = await fetch(
-                "http://localhost:5000/api/orders",
-                {
-                    method: "POST",
-                    credentials: "include",
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
-                    body: JSON.stringify({
-                        pizzaId: id,
-                        quantity: Number(form.quantity),
-                        deliveryAddress: form.deliveryAddress.trim(),
-                        deliveryDate: new Date(
-                            `${form.deliveryDate}T12:00:00`
-                        ).toISOString(),
-                    }),
-                }
-            );
-
-            const data = await response.json();
+            const response = await apiFetch("/api/orders", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    pizzaId: id,
+                    quantity: Number(form.quantity),
+                    deliveryAddress: form.deliveryAddress.trim(),
+                    deliveryDate: new Date(
+                        `${form.deliveryDate}T12:00:00`
+                    ).toISOString(),
+                }),
+            });
 
             if (!response.ok) {
-                throw new Error(data.message || "Order failed");
+                throw new Error(await readApiError(response, "Order failed"));
             }
 
+            toast.success("Order placed successfully!");
             router.push("/customer/dashboard");
             router.refresh();
         } catch (err) {
             setError(err.message);
+            toast.error(err.message);
         } finally {
             setLoading(false);
         }

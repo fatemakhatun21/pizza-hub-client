@@ -12,6 +12,8 @@ import {
 import { FaFacebookF, FaInstagram } from "react-icons/fa";
 import { FaXTwitter } from "react-icons/fa6";
 
+import ThemeToggle from "@/components/theme/ThemeToggle";
+
 const quickLinks = [
     { label: "Home", href: "/" },
     { label: "Browse Menu", href: "/menu" },
@@ -157,14 +159,18 @@ export default function Footer() {
                         All rights reserved.
                     </p>
 
-                    <p className="flex items-center gap-2 text-sm text-[#C9BDB5]">
-                        Made with
-                        <Pizza
-                            size={17}
-                            className="text-[#F06445]"
-                        />
-                        for pizza lovers
-                    </p>
+                    <div className="flex items-center gap-4">
+                        <p className="flex items-center gap-2 text-sm text-[#C9BDB5]">
+                            Made with
+                            <Pizza
+                                size={17}
+                                className="text-[#F06445]"
+                            />
+                            for pizza lovers
+                        </p>
+
+                        <ThemeToggle />
+                    </div>
                 </div>
             </div>
         </footer>

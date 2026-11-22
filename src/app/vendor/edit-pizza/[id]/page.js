@@ -4,15 +4,16 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { authClient } from "@/lib/auth-client";
+import { apiFetch, readApiError } from "@/lib/api";
+import { toast } from "sonner";
 import ImageUpload from "@/components/vendor/ImageUpload";
 import { ArrowLeft, Loader2, Save } from "lucide-react";
-
-const API_URL = "http://localhost:5000";
 
 export default function EditPizzaPage() {
     const router = useRouter();
     const { id } = useParams();
     const { data: session, isPending } = authClient.useSession();
+    const userId = session?.user?.id;
 
     const [form, setForm] = useState({
         name: "",
@@ -30,23 +31,19 @@ export default function EditPizzaPage() {
     useEffect(() => {
         if (isPending) return;
 
-        if (!session?.user) {
-            setLoading(false);
-            return;
-        }
+        if (!userId) return;
 
         const loadPizza = async () => {
             try {
-                const response = await fetch(
-                    `${API_URL}/api/menu/vendor/mine`,
-                    { credentials: "include" }
-                );
-
-                const data = await response.json();
+                const response = await apiFetch("/api/menu/vendor/mine");
 
                 if (!response.ok) {
-                    throw new Error(data.message || "Failed to load pizza.");
+                    throw new Error(
+                        await readApiError(response, "Failed to load pizza.")
+                    );
                 }
+
+                const data = await response.json();
 
                 const pizza = data.find((item) => item._id === id);
 
@@ -64,13 +61,14 @@ export default function EditPizzaPage() {
                 });
             } catch (err) {
                 setError(err.message);
+                toast.error(err.message);
             } finally {
                 setLoading(false);
             }
         };
 
         loadPizza();
-    }, [id, session?.user?.id, isPending]);
+    }, [id, userId, isPending]);
 
     const handleChange = (e) => {
         setForm((prev) => ({
@@ -87,47 +85,45 @@ export default function EditPizzaPage() {
 
         if (!Number.isFinite(price) || price <= 0) {
             setError("Please enter a valid price.");
+            toast.error("Please enter a valid price.");
             return;
         }
 
         setSaving(true);
 
         try {
-            const response = await fetch(
-                `${API_URL}/api/menu/${id}`,
-                {
-                    method: "PATCH",
-                    credentials: "include",
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
-                    body: JSON.stringify({
-                        name: form.name.trim(),
-                        description: form.description.trim(),
-                        category: form.category,
-                        price,
-                        location: form.location.trim(),
-                        image: form.image.trim(),
-                    }),
-                }
-            );
-
-            const data = await response.json();
+            const response = await apiFetch(`/api/menu/${id}`, {
+                method: "PATCH",
+                body: JSON.stringify({
+                    name: form.name.trim(),
+                    description: form.description.trim(),
+                    category: form.category,
+                    price,
+                    location: form.location.trim(),
+                    image: form.image.trim(),
+                }),
+            });
 
             if (!response.ok) {
-                throw new Error(data.message || "Failed to update pizza.");
+                throw new Error(
+                    await readApiError(response, "Failed to update pizza.")
+                );
             }
 
+            toast.success("Pizza updated and submitted for approval.");
             router.push("/vendor/dashboard");
             router.refresh();
         } catch (err) {
             setError(err.message);
+            toast.error(err.message);
         } finally {
             setSaving(false);
         }
     };
 
-    if (isPending || loading) {
+    const showLoading = isPending || (Boolean(userId) && loading);
+
+    if (showLoading) {
         return (
             <main className="flex min-h-[60vh] items-center justify-center">
                 <Loader2 size={32} className="animate-spin text-[#C93425]" />

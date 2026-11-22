@@ -1,7 +1,6 @@
 "use client";
 
-import { useMemo, useState, useEffect } from "react";
-import Image from "next/image";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
@@ -13,10 +12,13 @@ import {
     Pizza,
     X,
     Loader2,
+    Crown,
+    Sparkles,
 } from "lucide-react";
+import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
-
-const API_URL = "http://localhost:5000";
+import { apiFetch, readApiError } from "@/lib/api";
+import WishlistButton from "@/components/menu/WishlistButton";
 
 const categories = [
     "All Categories",
@@ -29,7 +31,7 @@ const categories = [
     "Beverages & Desserts",
 ];
 
-export default function BrowseMenuPage() {
+export default function BrowseMenu() {
     const searchParams = useSearchParams();
     const urlCategory = searchParams.get("category");
 
@@ -38,32 +40,44 @@ export default function BrowseMenuPage() {
     const [error, setError] = useState("");
 
     const [search, setSearch] = useState("");
-    const [category, setCategory] = useState(
-        categories.includes(urlCategory)
-            ? urlCategory
-            : "All Categories"
-    );
+    const [categoryOverride, setCategoryOverride] = useState({
+        source: null,
+        value: "All Categories",
+    });
     const [location, setLocation] = useState("All Locations");
     const [sort, setSort] = useState("default");
+
+    const urlCategoryValue = categories.includes(urlCategory)
+        ? urlCategory
+        : "All Categories";
+
+    const category =
+        categoryOverride.source === urlCategory
+            ? categoryOverride.value
+            : urlCategoryValue;
+
+    const setCategory = (value) =>
+        setCategoryOverride({ source: urlCategory, value });
 
     useEffect(() => {
         const controller = new AbortController();
 
-        const fetchMenu = async () => {
+        async function fetchMenu() {
             try {
                 setLoading(true);
                 setError("");
 
-                const response = await fetch(
-                    `${API_URL}/api/menu`,
-                    {
-                        signal: controller.signal,
-                        cache: "no-store",
-                    }
-                );
+                const response = await apiFetch("/api/menu", {
+                    signal: controller.signal,
+                });
 
                 if (!response.ok) {
-                    throw new Error("Failed to load menu items.");
+                    throw new Error(
+                        await readApiError(
+                            response,
+                            "Failed to load menu items."
+                        )
+                    );
                 }
 
                 const data = await response.json();
@@ -75,38 +89,30 @@ export default function BrowseMenuPage() {
                 setMenuItems(data);
             } catch (err) {
                 if (err.name !== "AbortError") {
-                    setError(err.message || "Something went wrong.");
+                    const message = err.message || "Something went wrong.";
+                    setError(message);
+                    toast.error(message);
                 }
             } finally {
                 if (!controller.signal.aborted) {
                     setLoading(false);
                 }
             }
-        };
+        }
 
         fetchMenu();
 
         return () => controller.abort();
     }, []);
 
-    useEffect(() => {
-        setCategory(
-            categories.includes(urlCategory)
-                ? urlCategory
-                : "All Categories"
-        );
-    }, [urlCategory]);
-
     const locations = useMemo(() => {
-        const uniqueLocations = [
+        const unique = [
             ...new Set(
-                menuItems
-                    .map((item) => item.location)
-                    .filter(Boolean)
+                menuItems.map((item) => item.location).filter(Boolean)
             ),
         ];
 
-        return ["All Locations", ...uniqueLocations.sort()];
+        return ["All Locations", ...unique.sort()];
     }, [menuItems]);
 
     const filteredItems = useMemo(() => {
@@ -131,11 +137,15 @@ export default function BrowseMenuPage() {
         });
 
         if (sort === "low") {
-            results.sort((a, b) => a.price - b.price);
+            results.sort(
+                (a, b) => Number(a.price) - Number(b.price)
+            );
         }
 
         if (sort === "high") {
-            results.sort((a, b) => b.price - a.price);
+            results.sort(
+                (a, b) => Number(b.price) - Number(a.price)
+            );
         }
 
         return results;
@@ -150,14 +160,13 @@ export default function BrowseMenuPage() {
 
     return (
         <main className="min-h-screen bg-[#FFF8ED]">
-
             <section className="border-b border-orange-100 bg-white py-16 text-center">
                 <div className="mx-auto max-w-7xl px-6">
                     <span className="text-sm font-bold uppercase tracking-[0.2em] text-[#C93425]">
                         Fresh Flavors Await
                     </span>
 
-                    <h1 className="mt-4 text-4xl font-black tracking-tight text-[#25201D] md:text-6xl">
+                    <h1 className="mt-4 text-4xl font-black text-[#25201D] md:text-6xl">
                         Explore Our{" "}
                         <span className="text-[#C93425]">
                             Menu
@@ -173,7 +182,6 @@ export default function BrowseMenuPage() {
             </section>
 
             <section className="mx-auto max-w-7xl px-6 py-12 lg:px-8">
-
                 <div className="rounded-3xl border border-orange-100 bg-white p-5 shadow-sm md:p-7">
                     <div className="mb-5 flex items-center gap-2">
                         <SlidersHorizontal
@@ -187,7 +195,6 @@ export default function BrowseMenuPage() {
                     </div>
 
                     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-
                         <div className="relative">
                             <Search
                                 size={19}
@@ -196,9 +203,7 @@ export default function BrowseMenuPage() {
 
                             <Input
                                 value={search}
-                                onChange={(e) =>
-                                    setSearch(e.target.value)
-                                }
+                                onChange={(e) => setSearch(e.target.value)}
                                 placeholder="Search pizzas..."
                                 aria-label="Search menu items"
                                 className="h-12 rounded-xl border-[#EBDCCB] pl-11"
@@ -207,11 +212,9 @@ export default function BrowseMenuPage() {
 
                         <select
                             value={category}
-                            onChange={(e) =>
-                                setCategory(e.target.value)
-                            }
+                            onChange={(e) => setCategory(e.target.value)}
                             aria-label="Filter by category"
-                            className="h-12 w-full rounded-xl border border-[#EBDCCB] bg-white px-4 text-sm text-[#25201D]"
+                            className="h-12 rounded-xl border border-[#EBDCCB] bg-white px-4 text-sm"
                         >
                             {categories.map((item) => (
                                 <option key={item} value={item}>
@@ -222,11 +225,9 @@ export default function BrowseMenuPage() {
 
                         <select
                             value={location}
-                            onChange={(e) =>
-                                setLocation(e.target.value)
-                            }
+                            onChange={(e) => setLocation(e.target.value)}
                             aria-label="Filter by location"
-                            className="h-12 w-full rounded-xl border border-[#EBDCCB] bg-white px-4 text-sm text-[#25201D]"
+                            className="h-12 rounded-xl border border-[#EBDCCB] bg-white px-4 text-sm"
                         >
                             {locations.map((item) => (
                                 <option key={item} value={item}>
@@ -237,28 +238,18 @@ export default function BrowseMenuPage() {
 
                         <select
                             value={sort}
-                            onChange={(e) =>
-                                setSort(e.target.value)
-                            }
+                            onChange={(e) => setSort(e.target.value)}
                             aria-label="Sort menu items"
-                            className="h-12 w-full rounded-xl border border-[#EBDCCB] bg-white px-4 text-sm text-[#25201D]"
+                            className="h-12 rounded-xl border border-[#EBDCCB] bg-white px-4 text-sm"
                         >
-                            <option value="default">
-                                Default Sorting
-                            </option>
-
-                            <option value="low">
-                                Price: Low to High
-                            </option>
-
-                            <option value="high">
-                                Price: High to Low
-                            </option>
+                            <option value="default">Default Sorting</option>
+                            <option value="low">Price: Low to High</option>
+                            <option value="high">Price: High to Low</option>
                         </select>
                     </div>
                 </div>
 
-                <div className="mb-7 mt-10 flex flex-wrap items-center justify-between gap-4">
+                <div className="mb-7 mt-10 flex items-center justify-between gap-4">
                     <p className="font-medium text-[#6B625C]">
                         Showing{" "}
                         <span className="font-bold text-[#C93425]">
@@ -270,7 +261,7 @@ export default function BrowseMenuPage() {
                     <button
                         type="button"
                         onClick={resetFilters}
-                        className="inline-flex items-center gap-2 text-sm font-semibold text-[#C93425] hover:underline"
+                        className="flex items-center gap-2 text-sm font-semibold text-[#C93425]"
                     >
                         <X size={17} />
                         Reset Filters
@@ -287,41 +278,70 @@ export default function BrowseMenuPage() {
                 ) : error ? (
                     <div
                         role="alert"
-                        className="rounded-3xl border border-red-100 bg-white px-6 py-16 text-center"
+                        className="rounded-3xl bg-white px-6 py-16 text-center"
                     >
-                        <p className="font-semibold text-red-600">
-                            {error}
-                        </p>
-
+                        <p className="text-red-600">{error}</p>
                         <button
                             type="button"
                             onClick={() => window.location.reload()}
-                            className="mt-5 rounded-full bg-[#C93425] px-6 py-3 font-semibold text-white"
+                            className="mt-5 rounded-full bg-[#C93425] px-6 py-3 text-white"
                         >
                             Try Again
                         </button>
                     </div>
                 ) : filteredItems.length > 0 ? (
-
                     <div className="grid gap-7 sm:grid-cols-2 lg:grid-cols-3">
                         {filteredItems.map((item) => (
                             <article
                                 key={item._id}
-                                className="group overflow-hidden rounded-2xl border border-orange-100 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl"
+                                className="group overflow-hidden rounded-2xl border border-orange-100 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-xl"
                             >
                                 <div className="relative h-60 overflow-hidden">
-                                    <Image
-                                        src={item.image || "/pizzas/classic-pepperoni.png"}
+                                    <img
+                                        src={
+                                            item.image ||
+                                            "/pizzas/classic-pepperoni.png"
+                                        }
                                         alt={item.name}
-                                        fill
-                                        unoptimized
-                                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                                        className="object-cover transition-transform duration-500 group-hover:scale-105"
+                                        className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                                     />
 
-                                    <span className="absolute left-4 top-4 rounded-full bg-white px-3 py-1 text-xs font-semibold text-[#C93425] shadow-sm">
-                                        {item.category}
-                                    </span>
+                                    <div className="absolute left-4 top-4 flex flex-col items-start gap-2">
+                                        <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-[#C93425]">
+                                            {item.category}
+                                        </span>
+
+                                        {(item.vendorPlan === "premium" ||
+                                            item.isFeatured) && (
+                                            <div className="flex flex-wrap gap-2">
+                                                {item.vendorPlan ===
+                                                    "premium" && (
+                                                    <span
+                                                        aria-label="Premium vendor"
+                                                        className="inline-flex items-center gap-1 rounded-full bg-[#25201D] px-3 py-1 text-xs font-semibold text-[#FFD27A]"
+                                                    >
+                                                        <Crown size={13} />
+                                                        Premium
+                                                    </span>
+                                                )}
+
+                                                {item.isFeatured && (
+                                                    <span
+                                                        aria-label="Featured pizza"
+                                                        className="inline-flex items-center gap-1 rounded-full bg-[#C93425] px-3 py-1 text-xs font-semibold text-white"
+                                                    >
+                                                        <Sparkles size={13} />
+                                                        Featured
+                                                    </span>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <WishlistButton
+                                        pizzaId={item._id}
+                                        className="absolute right-4 top-4 z-10"
+                                    />
                                 </div>
 
                                 <div className="flex min-h-[245px] flex-col p-6">
@@ -354,10 +374,10 @@ export default function BrowseMenuPage() {
                                     </div>
 
                                     <Link
-                                        href={`/order/${item._id}`}
+                                        href={`/menu/${item._id}`}
                                         className="mt-auto flex items-center justify-center gap-2 rounded-full border border-[#C93425] py-3 font-semibold text-[#C93425] transition-colors hover:bg-[#C93425] hover:text-white"
                                     >
-                                        Order Now
+                                        View Details
                                         <ArrowUpRight size={18} />
                                     </Link>
                                 </div>
@@ -365,25 +385,24 @@ export default function BrowseMenuPage() {
                         ))}
                     </div>
                 ) : (
-                    <div className="rounded-3xl border border-orange-100 bg-white px-6 py-20 text-center">
+                    <div className="rounded-3xl bg-white px-6 py-20 text-center">
                         <Pizza
                             size={54}
                             className="mx-auto text-[#C93425]"
-                            strokeWidth={1.4}
                         />
 
-                        <h2 className="mt-5 text-2xl font-bold text-[#25201D]">
+                        <h2 className="mt-5 text-2xl font-bold">
                             No menu items found
                         </h2>
 
                         <p className="mt-3 text-[#6B625C]">
-                            No approved pizzas match your filters yet.
+                            No approved pizzas match your filters.
                         </p>
 
                         <button
                             type="button"
                             onClick={resetFilters}
-                            className="mt-6 rounded-full bg-[#C93425] px-7 py-3 font-semibold text-white hover:bg-[#A7281D]"
+                            className="mt-6 rounded-full bg-[#C93425] px-7 py-3 font-semibold text-white"
                         >
                             Clear Filters
                         </button>

@@ -6,6 +6,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { authClient } from "@/lib/auth-client";
 import { FcGoogle } from "react-icons/fc";
+import { toast } from "sonner";
 import {
     Eye,
     EyeOff,
@@ -39,7 +40,9 @@ export default function LoginPage() {
         setError("");
 
         if (!form.email.trim() || !form.password) {
-            setError("Please enter your email and password.");
+            const message = "Please enter your email and password.";
+            setError(message);
+            toast.error(message);
             return;
         }
 
@@ -52,14 +55,19 @@ export default function LoginPage() {
             });
 
             if (authError) {
-                setError(authError.message || "Invalid email or password.");
+                const message = authError.message || "Invalid email or password.";
+                setError(message);
+                toast.error(message);
                 return;
             }
 
+            toast.success("Welcome back!");
             router.push("/");
             router.refresh();
         } catch {
-            setError("Unable to sign in. Please try again.");
+            const message = "Unable to sign in. Please try again.";
+            setError(message);
+            toast.error(message);
         } finally {
             setLoading(false);
         }
@@ -72,14 +80,19 @@ export default function LoginPage() {
         try {
             const { error: authError } = await authClient.signIn.social({
                 provider: "google",
-                callbackURL: "http://localhost:3000/",
+                callbackURL:
+                    process.env.NEXT_PUBLIC_CLIENT_URL || window.location.origin,
             });
 
             if (authError) {
-                setError(authError.message || "Google login failed.");
+                const message = authError.message || "Google login failed.";
+                setError(message);
+                toast.error(message);
             }
         } catch {
-            setError("Unable to connect with Google.");
+            const message = "Unable to connect with Google.";
+            setError(message);
+            toast.error(message);
         } finally {
             setLoading(false);
         }

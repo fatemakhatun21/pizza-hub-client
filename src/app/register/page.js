@@ -5,7 +5,9 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { authClient } from "@/lib/auth-client";
+import { apiFetch, readApiError } from "@/lib/api";
 import { FcGoogle } from "react-icons/fc";
+import { toast } from "sonner";
 import {
     Eye,
     EyeOff,
@@ -45,12 +47,16 @@ export default function RegisterPage() {
         setSuccess("");
 
         if (form.password !== form.confirmPassword) {
-            setError("Passwords do not match.");
+            const message = "Passwords do not match.";
+            setError(message);
+            toast.error(message);
             return;
         }
 
         if (form.password.length < 6) {
-            setError("Password must be at least 6 characters.");
+            const message = "Password must be at least 6 characters.";
+            setError(message);
+            toast.error(message);
             return;
         }
 
@@ -64,32 +70,32 @@ export default function RegisterPage() {
             });
 
             if (authError) {
-                setError(authError.message || "Registration failed.");
+                const message = authError.message || "Registration failed.";
+                setError(message);
+                toast.error(message);
                 return;
             }
 
 
             if (form.role === "vendor") {
-                const response = await fetch(
-                    "http://localhost:5000/api/vendor/register",
-                    {
-                        method: "POST",
-                        credentials: "include",
-                    }
-                );
-
-                const data = await response.json();
+                const response = await apiFetch("/api/vendor/register", {
+                    method: "POST",
+                });
 
                 if (!response.ok) {
-                    setError(
-                        data.message ||
+                    const message = await readApiError(
+                        response,
                         "Account created, but vendor activation failed."
                     );
+                    setError(message);
+                    toast.error(message);
                     return;
                 }
             }
 
-            setSuccess("Account created successfully!");
+            const message = "Account created successfully!";
+            setSuccess(message);
+            toast.success(message);
 
             router.push(
                 form.role === "vendor"
@@ -99,7 +105,9 @@ export default function RegisterPage() {
             router.refresh();
 
         } catch {
-            setError("Something went wrong. Please try again.");
+            const message = "Something went wrong. Please try again.";
+            setError(message);
+            toast.error(message);
         } finally {
             setLoading(false);
         }
@@ -112,14 +120,19 @@ export default function RegisterPage() {
         try {
             const { error: authError } = await authClient.signIn.social({
                 provider: "google",
-                callbackURL: "http://localhost:3000/",
+                callbackURL:
+                    process.env.NEXT_PUBLIC_CLIENT_URL || window.location.origin,
             });
 
             if (authError) {
-                setError(authError.message || "Google sign up failed.");
+                const message = authError.message || "Google sign up failed.";
+                setError(message);
+                toast.error(message);
             }
         } catch {
-            setError("Unable to connect with Google.");
+            const message = "Unable to connect with Google.";
+            setError(message);
+            toast.error(message);
         } finally {
             setLoading(false);
         }

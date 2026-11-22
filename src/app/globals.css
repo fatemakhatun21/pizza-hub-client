@@ -81,6 +81,33 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+
+  /* PizzaHub palette — light values mirror the existing hardcoded utilities. */
+  --ph-page: #fff8ed;
+  --ph-surface: #ffffff;
+  --ph-surface-raised: #ffffff;
+  --ph-surface-muted: #fff9f5;
+  --ph-ink: #25201d;
+  --ph-ink-soft: #352c27;
+  --ph-muted: #6b625c;
+  --ph-muted-strong: #8b817b;
+  --ph-faint: #9a8c82;
+  --ph-line: #ebdccb;
+  --ph-line-soft: #f1e5d9;
+  --ph-line-strong: #f3c5b6;
+  --ph-tint: #fde9e5;
+  --ph-accent: #c93425;
+  --ph-accent-strong: #c93425;
+  --ph-warning-tint: #fffbeb;
+  --ph-warning-tint-strong: #fef3c7;
+  --ph-warning-line: #fcd34d;
+  --ph-warning: #b45309;
+  --ph-success-tint: #f0fdf4;
+  --ph-success: #15803d;
+  --ph-danger-tint: #fef2f2;
+  --ph-danger-line: #fecaca;
+  --ph-danger: #dc2626;
+  --ph-info: #2563eb;
 }
 
 .dark {
@@ -115,6 +142,46 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.556 0 0);
+
+  /* PizzaHub palette — warm charcoal surfaces, warm cream text. */
+  --ph-page: #171310;
+  --ph-surface: #211b18;
+  --ph-surface-raised: #2b241f;
+  --ph-surface-muted: #1d1815;
+  --ph-ink: #f7f0e9;
+  --ph-ink-soft: #ece2d9;
+  --ph-muted: #b9ada4;
+  --ph-muted-strong: #a7998f;
+  --ph-faint: #978980;
+  --ph-line: #3b302a;
+  --ph-line-soft: #322822;
+  --ph-line-strong: #5b3b31;
+  --ph-tint: #3a231e;
+  --ph-accent: #f06445;
+  --ph-accent-strong: #ff8a6d;
+  --ph-warning-tint: #2e2414;
+  --ph-warning-tint-strong: #3d3018;
+  --ph-warning-line: #5a451f;
+  --ph-warning: #fbbf24;
+  --ph-success-tint: #15291c;
+  --ph-success: #4ade80;
+  --ph-danger-tint: #331e1b;
+  --ph-danger-line: #5a2b28;
+  --ph-danger: #f87171;
+  --ph-info: #8ab4ff;
+
+  color-scheme: dark;
+
+  /* Keep the shared (variable-based) UI on the same warm dark palette. */
+  --background: var(--ph-page);
+  --foreground: var(--ph-ink);
+  --card: var(--ph-surface);
+  --card-foreground: var(--ph-ink);
+  --popover: var(--ph-surface);
+  --popover-foreground: var(--ph-ink);
+  --border: var(--ph-line);
+  --input: var(--ph-line);
+  --muted-foreground: var(--ph-muted);
 }
 
 @layer base {
@@ -127,4 +194,159 @@
   html {
     @apply font-sans;
   }
+}
+
+/* ---------------------------------------------------------------------------
+   PizzaHub dark-mode readability.
+
+   Components use hardcoded Tailwind color utilities (many with arbitrary
+   values). Exact-token attribute selectors retint those utilities in dark mode
+   without editing the components. Light mode is untouched.
+
+   Deliberately NOT overridden: `.text-white` (white labels on red buttons and
+   in the footer), `.bg-[#25201D]` (footer / premium badge background) and
+   `.text-[#FFD27A]` (premium badge text).
+   --------------------------------------------------------------------------- */
+
+/* Page surfaces and tinted panels. */
+.dark [class~="bg-[#FFF8ED]"] {
+  background-color: var(--ph-page);
+}
+
+.dark [class~="bg-[#FFF9F5]"] {
+  background-color: var(--ph-surface-muted);
+}
+
+.dark [class~="bg-white"] {
+  background-color: var(--ph-surface);
+}
+
+.dark [class~="bg-white/95"] {
+  background-color: rgb(33 27 24 / 0.95);
+}
+
+.dark [class~="hover:bg-white"] {
+  background-color: var(--ph-surface-raised);
+}
+
+.dark [class~="bg-gray-100"] {
+  background-color: var(--ph-surface-raised);
+}
+
+.dark [class~="bg-gray-200"] {
+  background-color: var(--ph-line);
+}
+
+.dark [class~="bg-[#FDE9E5]"],
+.dark [class~="bg-[#FCE8DD]"],
+.dark [class~="bg-orange-50"],
+.dark [class~="bg-orange-100"],
+.dark [class~="hover:bg-[#FFF3EB]"],
+.dark [class~="hover:bg-[#FFF8ED]"],
+.dark [class~="hover:bg-orange-50"] {
+  background-color: var(--ph-tint);
+}
+
+.dark [class~="bg-amber-50"] {
+  background-color: var(--ph-warning-tint);
+}
+
+.dark [class~="bg-amber-100"] {
+  background-color: var(--ph-warning-tint-strong);
+}
+
+.dark [class~="bg-green-50"] {
+  background-color: var(--ph-success-tint);
+}
+
+.dark [class~="bg-red-50"],
+.dark [class~="hover:bg-red-50"] {
+  background-color: var(--ph-danger-tint);
+}
+
+/* Borders and dividers. */
+.dark [class~="border-orange-100"],
+.dark [class~="border-[#F1E5D9]"],
+.dark [class~="border-[#F1E8DE]"],
+.dark [class~="border-gray-100"] {
+  border-color: var(--ph-line-soft);
+}
+
+.dark [class~="border-orange-200"],
+.dark [class~="border-[#EBDCCB]"],
+.dark [class~="border-[#EEDFD2]"],
+.dark [class~="border-gray-200"] {
+  border-color: var(--ph-line);
+}
+
+.dark [class~="hover:border-[#F3C5B6]"] {
+  border-color: var(--ph-line-strong);
+}
+
+.dark [class~="border-[#C93425]"],
+.dark [class~="hover:border-[#C93425]"],
+.dark [class~="focus:border-[#C93425]"] {
+  border-color: var(--ph-accent);
+}
+
+.dark [class~="border-amber-200"] {
+  border-color: var(--ph-warning-line);
+}
+
+.dark [class~="border-red-100"] {
+  border-color: var(--ph-danger-line);
+}
+
+/* Body text and muted labels. */
+.dark [class~="text-[#25201D]"],
+.dark [class~="text-gray-900"] {
+  color: var(--ph-ink);
+}
+
+.dark [class~="text-[#352C27]"] {
+  color: var(--ph-ink-soft);
+}
+
+.dark [class~="text-[#6B625C]"],
+.dark [class~="text-gray-500"],
+.dark [class~="text-gray-600"] {
+  color: var(--ph-muted);
+}
+
+.dark [class~="text-[#8B817B]"] {
+  color: var(--ph-muted-strong);
+}
+
+.dark [class~="text-[#9A8C82]"],
+.dark [class~="text-gray-400"],
+.dark [class~="text-[#C9B7AA]"] {
+  color: var(--ph-faint);
+}
+
+/* Brand accent text stays brand-red, just brightened for dark surfaces. */
+.dark [class~="text-[#C93425]"] {
+  color: var(--ph-accent);
+}
+
+.dark [class~="hover:text-[#C93425]"] {
+  color: var(--ph-accent-strong);
+}
+
+.dark [class~="text-amber-600"],
+.dark [class~="text-amber-700"] {
+  color: var(--ph-warning);
+}
+
+.dark [class~="text-green-600"],
+.dark [class~="text-green-700"] {
+  color: var(--ph-success);
+}
+
+.dark [class~="text-red-600"],
+.dark [class~="hover:text-red-600"] {
+  color: var(--ph-danger);
+}
+
+.dark [class~="text-blue-600"] {
+  color: var(--ph-info);
 }

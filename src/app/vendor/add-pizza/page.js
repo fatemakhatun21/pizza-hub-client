@@ -4,6 +4,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { authClient } from "@/lib/auth-client";
+import { apiFetch, readApiError } from "@/lib/api";
+import { toast } from "sonner";
 import ImageUpload from "@/components/vendor/ImageUpload";
 import { ArrowLeft, Loader2, Pizza } from "lucide-react";
 
@@ -39,43 +41,37 @@ export default function AddPizzaPage() {
 
         if (!Number.isFinite(price) || price <= 0) {
             setError("Please enter a valid price.");
+            toast.error("Please enter a valid price.");
             return;
         }
 
         setLoading(true);
 
         try {
-            const response = await fetch(
-                "http://localhost:5000/api/menu",
-                {
-                    method: "POST",
-                    credentials: "include",
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
-                    body: JSON.stringify({
-                        name: form.name.trim(),
-                        description: form.description.trim(),
-                        category: form.category,
-                        price,
-                        location: form.location.trim(),
-                        image: form.image.trim(),
-                    }),
-                }
-            );
-
-            const data = await response.json();
+            const response = await apiFetch("/api/menu", {
+                method: "POST",
+                body: JSON.stringify({
+                    name: form.name.trim(),
+                    description: form.description.trim(),
+                    category: form.category,
+                    price,
+                    location: form.location.trim(),
+                    image: form.image.trim(),
+                }),
+            });
 
             if (!response.ok) {
                 throw new Error(
-                    data.message || "Failed to add pizza."
+                    await readApiError(response, "Failed to add pizza.")
                 );
             }
 
+            toast.success("Pizza submitted for admin approval.");
             router.push("/vendor/dashboard");
             router.refresh();
         } catch (err) {
             setError(err.message);
+            toast.error(err.message);
         } finally {
             setLoading(false);
         }
