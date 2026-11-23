@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import DashboardShell from "@/components/layout/DashboardShell";
@@ -15,6 +15,7 @@ import {
     CheckCircle2,
     Loader2,
     RefreshCw,
+    Search,
 } from "lucide-react";
 
 export default function AdminUsersPage() {
@@ -25,6 +26,20 @@ export default function AdminUsersPage() {
     const [loading, setLoading] = useState(true);
     const [processingId, setProcessingId] = useState(null);
     const [error, setError] = useState("");
+    const [searchTerm, setSearchTerm] = useState("");
+    const [roleFilter, setRoleFilter] = useState("all");
+
+    const filteredUsers = useMemo(() => {
+        const query = searchTerm.trim().toLowerCase();
+
+        return users.filter((user) => {
+            const role = user.role || "customer";
+            const matchesRole = roleFilter === "all" || role === roleFilter;
+            const searchable = `${user.name || ""} ${user.email || ""}`.toLowerCase();
+
+            return matchesRole && (!query || searchable.includes(query));
+        });
+    }, [users, searchTerm, roleFilter]);
 
     const fetchUsers = useCallback(async () => {
         setLoading(true);
@@ -223,9 +238,52 @@ export default function AdminUsersPage() {
                     </div>
 
                     <section className="rounded-2xl border border-orange-100 bg-white p-6 shadow-sm">
-                        <h2 className="mb-6 text-xl font-bold">
-                            All Users
-                        </h2>
+                        <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
+                            <h2 className="text-xl font-bold">
+                                All Users
+                            </h2>
+
+                            <div className="flex flex-wrap items-center gap-3">
+                                <label className="relative block">
+                                    <span className="sr-only">
+                                        Search users by name or email
+                                    </span>
+                                    <Search
+                                        size={16}
+                                        className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#8B817B]"
+                                    />
+                                    <input
+                                        type="search"
+                                        value={searchTerm}
+                                        onChange={(event) =>
+                                            setSearchTerm(event.target.value)
+                                        }
+                                        placeholder="Search name or email"
+                                        className="w-full rounded-full border border-orange-200 bg-white py-2 pl-9 pr-4 text-sm text-[#25201D] outline-none focus:border-[#C93425] sm:w-64"
+                                    />
+                                </label>
+
+                                <label className="flex items-center gap-2 text-sm text-[#6B625C]">
+                                    <span className="sr-only">
+                                        Filter users by role
+                                    </span>
+                                    <select
+                                        value={roleFilter}
+                                        onChange={(event) =>
+                                            setRoleFilter(event.target.value)
+                                        }
+                                        className="rounded-full border border-orange-200 bg-white px-4 py-2 text-sm font-semibold text-[#25201D] outline-none focus:border-[#C93425]"
+                                    >
+                                        <option value="all">All roles</option>
+                                        <option value="customer">
+                                            Customers
+                                        </option>
+                                        <option value="vendor">Vendors</option>
+                                        <option value="admin">Admins</option>
+                                    </select>
+                                </label>
+                            </div>
+                        </div>
 
                         {loading ? (
                             <div className="flex justify-center py-12">
@@ -238,6 +296,22 @@ export default function AdminUsersPage() {
                             <p className="py-12 text-center text-gray-500">
                                 No users found.
                             </p>
+                        ) : filteredUsers.length === 0 ? (
+                            <div className="py-12 text-center">
+                                <p className="text-gray-500">
+                                    No users match your search or role filter.
+                                </p>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setSearchTerm("");
+                                        setRoleFilter("all");
+                                    }}
+                                    className="mt-4 rounded-full border border-[#C93425] px-5 py-2 font-semibold text-[#C93425]"
+                                >
+                                    Clear filters
+                                </button>
+                            </div>
                         ) : (
                             <div className="overflow-x-auto">
                                 <table className="w-full min-w-[750px] text-left">
@@ -251,7 +325,7 @@ export default function AdminUsersPage() {
                                     </thead>
 
                                     <tbody>
-                                        {users.map((user) => (
+                                        {filteredUsers.map((user) => (
                                             <tr
                                                 key={user._id}
                                                 className="border-b border-gray-100 last:border-0"

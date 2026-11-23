@@ -36,6 +36,9 @@ export default function DashboardShell({ role, children }) {
     const pathname = usePathname();
     const { ready, allowed, profile, message } = useAuthGuard(role);
     const links = NAVIGATION[role] || [];
+    const isPremium = Boolean(
+        profile?.isPremium === true || profile?.plan === "premium"
+    );
 
     if (!ready) {
         return (
@@ -103,7 +106,7 @@ export default function DashboardShell({ role, children }) {
                                 {profile?.role || role}
                             </p>
 
-                            {profile?.plan === "premium" && (
+                            {isPremium && (
                                 <span className="mt-3 inline-flex items-center gap-1 rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-700">
                                     <Crown size={14} /> Premium
                                 </span>

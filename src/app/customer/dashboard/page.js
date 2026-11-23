@@ -8,7 +8,14 @@ import DashboardShell from "@/components/layout/DashboardShell";
 import { DonutChart } from "@/components/dashboard/Charts";
 import { authClient } from "@/lib/auth-client";
 import { apiFetch, readApiError } from "@/lib/api";
-import { Loader2, ShoppingBag, XCircle } from "lucide-react";
+import {
+    Ban,
+    CheckCircle2,
+    Clock3,
+    Loader2,
+    ShoppingBag,
+    XCircle,
+} from "lucide-react";
 
 const ORDER_STATUSES = [
     "pending",
@@ -173,6 +180,47 @@ export default function CustomerDashboard() {
         value: orders.filter((order) => order.status === status).length,
     }));
 
+    const countByStatus = (status) =>
+        orders.filter((order) => order.status === status).length;
+
+    const stats = [
+        {
+            title: "Total Orders",
+            value: orders.length,
+            icon: ShoppingBag,
+            color: "text-[#C93425]",
+            bg: "bg-[#FDE9E5]",
+        },
+        {
+            title: "Pending",
+            value: countByStatus("pending"),
+            icon: Clock3,
+            color: "text-amber-600",
+            bg: "bg-amber-50",
+        },
+        {
+            title: "Accepted",
+            value: countByStatus("accepted"),
+            icon: CheckCircle2,
+            color: "text-green-600",
+            bg: "bg-green-50",
+        },
+        {
+            title: "Rejected",
+            value: countByStatus("rejected"),
+            icon: XCircle,
+            color: "text-red-600",
+            bg: "bg-red-50",
+        },
+        {
+            title: "Cancelled",
+            value: countByStatus("cancelled"),
+            icon: Ban,
+            color: "text-gray-600",
+            bg: "bg-gray-100",
+        },
+    ];
+
     return (
         <DashboardShell role="customer">
             <div className="min-h-screen bg-[#FFF8ED] px-5 py-12">
@@ -200,6 +248,36 @@ export default function CustomerDashboard() {
                             {error}
                         </p>
                     )}
+
+                    <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+                        {stats.map((stat) => {
+                            const Icon = stat.icon;
+
+                            return (
+                                <div
+                                    key={stat.title}
+                                    className="rounded-2xl border border-orange-100 bg-white p-5 shadow-sm"
+                                >
+                                    <div
+                                        className={`mb-3 inline-flex rounded-xl p-3 ${stat.bg}`}
+                                    >
+                                        <Icon
+                                            size={22}
+                                            className={stat.color}
+                                        />
+                                    </div>
+
+                                    <p className="text-sm text-[#6B625C]">
+                                        {stat.title}
+                                    </p>
+
+                                    <h2 className="mt-1 text-2xl font-bold text-[#25201D]">
+                                        {stat.value}
+                                    </h2>
+                                </div>
+                            );
+                        })}
+                    </div>
 
                     <div className="mb-6 max-w-2xl">
                         <DonutChart

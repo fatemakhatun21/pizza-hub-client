@@ -46,7 +46,8 @@ export default function VendorDashboard() {
 
                 setIsPremium(
                     Boolean(
-                        profile?.isPremium ?? (profile?.plan === "premium")
+                        profile?.isPremium === true ||
+                            profile?.plan === "premium"
                     )
                 );
             } catch {

@@ -101,8 +101,7 @@ export default function Navbar() {
 
     const isPremium =
         role === "vendor" &&
-        (account?.plan === "premium" ||
-            account?.isPremium === true);
+        Boolean(account?.isPremium === true || account?.plan === "premium");
 
     const dashboardHref =
         role === "admin"
