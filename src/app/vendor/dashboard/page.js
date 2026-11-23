@@ -29,6 +29,7 @@ export default function VendorDashboard() {
     const [error, setError] = useState("");
     const [isPremium, setIsPremium] = useState(false);
     const [featuringId, setFeaturingId] = useState(null);
+    const [updatingAvailabilityId, setUpdatingAvailabilityId] = useState(null);
 
     useEffect(() => {
         if (isPending) return;
@@ -47,7 +48,7 @@ export default function VendorDashboard() {
                 setIsPremium(
                     Boolean(
                         profile?.isPremium === true ||
-                            profile?.plan === "premium"
+                        profile?.plan === "premium"
                     )
                 );
             } catch {
@@ -177,6 +178,50 @@ export default function VendorDashboard() {
         } catch (err) {
             setError(err.message);
             toast.error(err.message);
+        }
+    };
+
+    const handleAvailability = async (pizza) => {
+        if (pizza.status !== "approved" || updatingAvailabilityId) return;
+
+        const nextAvailability = !pizza.isActive;
+        setUpdatingAvailabilityId(pizza._id);
+
+        try {
+            const response = await apiFetch(
+                `/api/menu/${pizza._id}/availability`,
+                {
+                    method: "PATCH",
+                    body: JSON.stringify({
+                        isActive: nextAvailability,
+                    }),
+                }
+            );
+
+            if (!response.ok) {
+                throw new Error(
+                    await readApiError(
+                        response,
+                        "Failed to update pizza availability"
+                    )
+                );
+            }
+
+            const data = await response.json();
+
+            setPizzas((prev) =>
+                prev.map((item) =>
+                    item._id === pizza._id
+                        ? { ...item, isActive: data.isActive }
+                        : item
+                )
+            );
+
+            toast.success(data.message);
+        } catch (err) {
+            toast.error(err.message);
+        } finally {
+            setUpdatingAvailabilityId(null);
         }
     };
 
@@ -368,17 +413,56 @@ export default function VendorDashboard() {
                                                             </span>
                                                         </td>
 
+
                                                         <td className="p-4">
-                                                            <p>
-                                                                {pizza.isActive
-                                                                    ? "Active"
-                                                                    : "Inactive"}
-                                                            </p>
-                                                            {pizza.isFeatured && (
-                                                                <span className="mt-1 inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-700">
-                                                                    Featured
-                                                                </span>
-                                                            )}
+                                                            <div className="flex flex-col items-start gap-2">
+                                                                <button
+                                                                    type="button"
+                                                                    role="switch"
+                                                                    aria-label={`Availability for ${pizza.name}`}
+                                                                    aria-checked={Boolean(pizza.isActive)}
+                                                                    disabled={
+                                                                        pizza.status !== "approved" ||
+                                                                        updatingAvailabilityId !== null
+                                                                    }
+                                                                    onClick={() => handleAvailability(pizza)}
+                                                                    className="flex items-center gap-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                                                >
+                                                                    <span
+                                                                        className={`relative h-6 w-11 rounded-full transition-colors ${pizza.isActive
+                                                                            ? "bg-green-600"
+                                                                            : "bg-gray-300"
+                                                                            }`}
+                                                                    >
+                                                                        <span
+                                                                            className={`absolute top-1 h-4 w-4 rounded-full bg-white transition-transform ${pizza.isActive
+                                                                                ? "left-1 translate-x-5"
+                                                                                : "left-1"
+                                                                                }`}
+                                                                        />
+                                                                    </span>
+
+                                                                    <span className="text-sm font-semibold">
+                                                                        {updatingAvailabilityId === pizza._id
+                                                                            ? "Updating..."
+                                                                            : pizza.isActive
+                                                                                ? "Active"
+                                                                                : "Inactive"}
+                                                                    </span>
+                                                                </button>
+
+                                                                {pizza.status !== "approved" && (
+                                                                    <span className="text-xs text-gray-500">
+                                                                        Requires admin approval
+                                                                    </span>
+                                                                )}
+
+                                                                {pizza.isFeatured && (
+                                                                    <span className="inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-700">
+                                                                        Featured
+                                                                    </span>
+                                                                )}
+                                                            </div>
                                                         </td>
 
                                                         <td className="p-4">
