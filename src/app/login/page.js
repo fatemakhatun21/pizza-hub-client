@@ -16,6 +16,25 @@ import {
     Loader2,
 } from "lucide-react";
 
+function getSafeCallbackUrl() {
+    if (typeof window === "undefined") return "/";
+
+    const value = new URLSearchParams(window.location.search).get(
+        "callbackUrl"
+    );
+
+    if (
+        !value ||
+        !value.startsWith("/") ||
+        value.startsWith("//") ||
+        value.includes("\\")
+    ) {
+        return "/";
+    }
+
+    return value;
+}
+
 export default function LoginPage() {
     const router = useRouter();
 
@@ -62,7 +81,7 @@ export default function LoginPage() {
             }
 
             toast.success("Welcome back!");
-            router.push("/");
+            router.push(getSafeCallbackUrl());
             router.refresh();
         } catch {
             const message = "Unable to sign in. Please try again.";
@@ -78,10 +97,12 @@ export default function LoginPage() {
         setLoading(true);
 
         try {
+            const origin =
+                process.env.NEXT_PUBLIC_CLIENT_URL || window.location.origin;
+
             const { error: authError } = await authClient.signIn.social({
                 provider: "google",
-                callbackURL:
-                    process.env.NEXT_PUBLIC_CLIENT_URL || window.location.origin,
+                callbackURL: new URL(getSafeCallbackUrl(), origin).toString(),
             });
 
             if (authError) {

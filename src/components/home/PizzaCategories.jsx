@@ -25,10 +25,10 @@ const categories = [
         slug: "Meat Lovers",
     },
     {
-        name: "Specialty / Gourmet",
+        name: "Specialty Pizzas",
         description: "Extraordinary pizza creations",
         image: "/pizzas/hawaiian.png",
-        slug: "Specialty / Gourmet Pizzas",
+        slug: "Specialty Pizzas",
     },
     {
         name: "Sides & Appetizers",

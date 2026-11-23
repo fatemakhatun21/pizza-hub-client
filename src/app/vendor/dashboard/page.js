@@ -9,6 +9,7 @@ import DashboardShell from "@/components/layout/DashboardShell";
 import { DonutChart } from "@/components/dashboard/Charts";
 import { authClient } from "@/lib/auth-client";
 import { apiFetch, readApiError } from "@/lib/api";
+import { isPremiumAccount } from "@/lib/premium";
 import {
     Pizza,
     Plus,
@@ -25,6 +26,7 @@ export default function VendorDashboard() {
     const userId = session?.user?.id;
 
     const [pizzas, setPizzas] = useState([]);
+    const [vendorOrders, setVendorOrders] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const [isPremium, setIsPremium] = useState(false);
@@ -45,12 +47,7 @@ export default function VendorDashboard() {
                 const data = await response.json();
                 const profile = data.user ?? data;
 
-                setIsPremium(
-                    Boolean(
-                        profile?.isPremium === true ||
-                        profile?.plan === "premium"
-                    )
-                );
+                setIsPremium(isPremiumAccount(profile));
             } catch {
                 // Premium status is optional; feature controls stay disabled.
             }
@@ -76,8 +73,18 @@ export default function VendorDashboard() {
             }
         };
 
+        const loadOrders = async () => {
+            try {
+                const response = await apiFetch("/api/orders/vendor");
+                if (response.ok) setVendorOrders(await response.json());
+            } catch {
+                // Menu management stays usable even if order metrics fail.
+            }
+        };
+
         loadProfile();
         fetchPizzas();
+        loadOrders();
     }, [userId, isPending]);
 
     const showLoading = Boolean(userId) && loading;
@@ -120,11 +127,46 @@ export default function VendorDashboard() {
         (pizza) => pizza.status === "rejected"
     ).length;
 
+    const active = pizzas.filter(
+        (pizza) => pizza.status === "approved" &&
+            pizza.isActive === true && pizza.adminPublished !== false
+    ).length;
+    const pendingOrders = vendorOrders.filter((order) => order.status === "pending").length;
+    const acceptedOrders = vendorOrders.filter((order) => order.status === "accepted").length;
+
     const stats = [
         {
             title: "Total Pizzas",
             value: pizzas.length,
             icon: Pizza,
+            color: "text-[#C93425]",
+            bg: "bg-red-50",
+        },
+        {
+            title: "Active Pizzas",
+            value: active,
+            icon: CheckCircle2,
+            color: "text-green-600",
+            bg: "bg-green-50",
+        },
+        {
+            title: "Pending Orders",
+            value: pendingOrders,
+            icon: Clock3,
+            color: "text-amber-600",
+            bg: "bg-amber-50",
+        },
+        {
+            title: "Accepted Orders",
+            value: acceptedOrders,
+            icon: ShoppingBag,
+            color: "text-green-600",
+            bg: "bg-green-50",
+        },
+        {
+            title: "Current Plan",
+            value: isPremium ? "Premium" : "Free",
+            icon: Star,
             color: "text-[#C93425]",
             bg: "bg-red-50",
         },

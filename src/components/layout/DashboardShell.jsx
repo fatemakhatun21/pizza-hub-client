@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Crown, Loader2, ShieldAlert } from "lucide-react";
 import { useAuthGuard } from "@/lib/use-auth-guard";
+import { isPremiumAccount } from "@/lib/premium";
 
 const NAVIGATION = {
     admin: [
@@ -36,9 +37,7 @@ export default function DashboardShell({ role, children }) {
     const pathname = usePathname();
     const { ready, allowed, profile, message } = useAuthGuard(role);
     const links = NAVIGATION[role] || [];
-    const isPremium = Boolean(
-        profile?.isPremium === true || profile?.plan === "premium"
-    );
+    const isPremium = isPremiumAccount(profile);
 
     if (!ready) {
         return (

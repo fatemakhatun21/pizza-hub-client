@@ -62,6 +62,15 @@ function truncateSession(id) {
         : `${value.slice(0, 8)}…${value.slice(-6)}`;
 }
 
+function vendorLabel(transaction) {
+    return (
+        transaction.vendor?.businessName ||
+        transaction.vendor?.name ||
+        transaction.email ||
+        "Unknown vendor"
+    );
+}
+
 function statusClasses(status) {
     if (isSuccessful(status)) {
         return "bg-green-50 text-green-700";
@@ -92,10 +101,23 @@ async function fetchTransactionsPage(skip) {
     return Array.isArray(data) ? data : [];
 }
 
+async function fetchTransactionSummary() {
+    const response = await apiFetch("/api/admin/stats");
+
+    if (!response.ok) {
+        throw new Error(
+            await readApiError(response, "Failed to load transaction totals.")
+        );
+    }
+
+    return (await response.json()).transactions ?? {};
+}
+
 export default function AdminTransactionsPage() {
     const { ready, allowed } = useAuthGuard("admin");
 
     const [transactions, setTransactions] = useState([]);
+    const [summary, setSummary] = useState({ total: 0, completedAmount: 0 });
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const [hasMore, setHasMore] = useState(false);
@@ -105,11 +127,12 @@ export default function AdminTransactionsPage() {
 
         let active = true;
 
-        fetchTransactionsPage(0)
-            .then((page) => {
+        Promise.all([fetchTransactionsPage(0), fetchTransactionSummary()])
+            .then(([page, totals]) => {
                 if (!active) return;
 
                 setTransactions(page);
+                setSummary(totals);
                 setHasMore(page.length === PAGE_SIZE);
                 setError("");
             })
@@ -137,9 +160,13 @@ export default function AdminTransactionsPage() {
         setError("");
 
         try {
-            const page = await fetchTransactionsPage(skip);
+            const [page, totals] = await Promise.all([
+                fetchTransactionsPage(skip),
+                append ? Promise.resolve(null) : fetchTransactionSummary(),
+            ]);
 
             setTransactions((prev) => (append ? [...prev, ...page] : page));
+            if (totals) setSummary(totals);
             setHasMore(page.length === PAGE_SIZE);
         } catch (err) {
             const message = err.message || "Failed to load transactions.";
@@ -153,36 +180,26 @@ export default function AdminTransactionsPage() {
     const handleRefresh = () => runRequest(0, false);
     const handleLoadMore = () => runRequest(transactions.length, true);
 
-    const successful = useMemo(
-        () => transactions.filter((item) => isSuccessful(item.status)),
+    const currency = useMemo(
+        () =>
+            transactions.find((item) => item.currency)?.currency || "USD",
         [transactions]
     );
-
-    const successfulAmount = useMemo(
-        () =>
-            successful.reduce(
-                (total, item) => total + (Number(item.amountTotal) || 0),
-                0
-            ),
-        [successful]
-    );
-
-    const currency = successful.find((item) => item.currency)?.currency || "USD";
 
     const stats = [
         {
             title: "Total Transactions",
-            value: transactions.length,
+            value: summary.total ?? 0,
             icon: ReceiptText,
         },
         {
             title: "Successful Payments",
-            value: successful.length,
+            value: summary.successful ?? 0,
             icon: BadgeCheck,
         },
         {
             title: "Successful Amount",
-            value: formatAmount(successfulAmount, currency),
+            value: formatAmount(summary.completedAmount ?? 0, currency),
             icon: CreditCard,
         },
     ];
@@ -282,8 +299,8 @@ export default function AdminTransactionsPage() {
                                 <thead className="bg-[#FFF8ED] text-sm">
                                     <tr>
                                         <th className="p-4">Date</th>
-                                        <th className="p-4">User</th>
-                                        <th className="p-4">Type</th>
+                                        <th className="p-4">Vendor</th>
+                                        <th className="p-4">Plan</th>
                                         <th className="p-4">Status</th>
                                         <th className="p-4">Amount</th>
                                         <th className="p-4">Stripe Session</th>
@@ -306,36 +323,38 @@ export default function AdminTransactionsPage() {
 
                                             <td className="p-4">
                                                 <p className="font-semibold text-[#25201D]">
-                                                    {transaction.email ||
-                                                        "Unknown user"}
+                                                    {vendorLabel(transaction)}
                                                 </p>
 
                                                 <p
                                                     className="mt-1 max-w-[210px] truncate text-xs text-gray-500"
-                                                    title={transaction.userId}
+                                                    title={transaction.vendorId}
                                                 >
-                                                    {transaction.userId || "—"}
+                                                    {transaction.vendorId || transaction.email || "—"}
                                                 </p>
                                             </td>
 
                                             <td className="p-4 capitalize">
-                                                {transaction.type || "—"}
+                                                {transaction.plan || "unknown"}
                                             </td>
 
                                             <td className="p-4">
                                                 <span
                                                     className={`rounded-full px-3 py-1 text-xs font-semibold capitalize ${statusClasses(
-                                                        transaction.status
+                                                        transaction.paymentStatus ||
+                                                            transaction.status
                                                     )}`}
                                                 >
-                                                    {transaction.status ||
+                                                    {transaction.paymentStatus ||
+                                                        transaction.status ||
                                                         "unknown"}
                                                 </span>
                                             </td>
 
                                             <td className="p-4 font-semibold">
                                                 {formatAmount(
-                                                    transaction.amountTotal,
+                                                    transaction.amount ??
+                                                        transaction.amountTotal,
                                                     transaction.currency
                                                 )}
                                             </td>

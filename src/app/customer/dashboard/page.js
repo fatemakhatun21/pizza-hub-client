@@ -1,8 +1,9 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import DashboardShell from "@/components/layout/DashboardShell";
 import { DonutChart } from "@/components/dashboard/Charts";
@@ -73,9 +74,13 @@ function OrderTimeline({ timeline }) {
     );
 }
 
-export default function CustomerDashboard() {
+function CustomerDashboardContent() {
     const { data: session, isPending } = authClient.useSession();
+    const searchParams = useSearchParams();
     const userId = session?.user?.id;
+    // Order-status emails deep-link here with ?orderId=<id>. This is the
+    // existing authenticated order view, not the pizza creation route.
+    const focusedOrderId = searchParams.get("orderId") ?? "";
 
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -298,12 +303,16 @@ export default function CustomerDashboard() {
                         </div>
                     ) : (
                         <div className="overflow-x-auto rounded-2xl bg-white p-5 shadow-sm">
-                            <table className="w-full min-w-[700px] text-left">
+                            <table className="w-full min-w-[1100px] text-left">
                                 <thead className="border-b bg-[#FFF8ED]">
                                     <tr>
                                         <th className="p-4">Pizza</th>
+                                        <th className="p-4">Restaurant</th>
+                                        <th className="p-4">Delivery</th>
+                                        <th className="p-4">Ordered</th>
                                         <th className="p-4">Quantity</th>
                                         <th className="p-4">Total</th>
+                                        <th className="p-4">Special Instructions</th>
                                         <th className="p-4">Status</th>
                                         <th className="p-4">Action</th>
                                     </tr>
@@ -311,17 +320,55 @@ export default function CustomerDashboard() {
 
                                 <tbody>
                                     {orders.map((order) => (
-                                        <tr key={order._id} className="border-b last:border-0">
+                                        <tr
+                                            key={order._id}
+                                            id={`order-${order._id}`}
+                                            className={
+                                                order._id === focusedOrderId
+                                                    ? "border-b bg-amber-50 last:border-0"
+                                                    : "border-b last:border-0"
+                                            }
+                                        >
                                             <td className="p-4 font-semibold">
-                                                {order.pizzaName}
+                                                <div className="flex items-center gap-3">
+                                                    {order.pizzaImage && (
+                                                        <img
+                                                            src={order.pizzaImage}
+                                                            alt={order.pizzaName || "Pizza"}
+                                                            width={48}
+                                                            height={48}
+                                                            className="h-12 w-12 shrink-0 rounded-lg object-cover"
+                                                        />
+                                                    )}
+                                                    <span>{order.pizzaName}</span>
+                                                </div>
+                                                {order._id === focusedOrderId && (
+                                                    <span className="ml-2 rounded-full bg-amber-200 px-2 py-0.5 text-xs font-bold text-amber-800">
+                                                        Order update
+                                                    </span>
+                                                )}
                                             </td>
 
+                                            <td className="p-4 text-sm">
+                                                {order.vendorName || order.vendorId || "—"}
+                                            </td>
+                                            <td className="p-4 text-sm">
+                                                <div>{order.deliveryDate ? new Date(order.deliveryDate).toLocaleDateString() : "—"}</div>
+                                                <div className="max-w-[230px] text-gray-500">{order.deliveryAddress || "—"}</div>
+                                            </td>
+                                            <td className="p-4 text-sm">
+                                                {order.createdAt ? new Date(order.createdAt).toLocaleDateString() : "—"}
+                                            </td>
                                             <td className="p-4">
                                                 {order.quantity}
                                             </td>
 
                                             <td className="p-4">
                                                 ${Number(order.totalPrice).toFixed(2)}
+                                            </td>
+
+                                            <td className="max-w-[220px] p-4 text-sm text-gray-600">
+                                                {order.message || "—"}
                                             </td>
 
                                             <td className="p-4">
@@ -359,5 +406,19 @@ export default function CustomerDashboard() {
                 </div>
             </div>
         </DashboardShell>
+    );
+}
+
+export default function CustomerDashboard() {
+    return (
+        <Suspense
+            fallback={
+                <div className="flex min-h-[70vh] items-center justify-center">
+                    <Loader2 className="animate-spin text-[#C93425]" size={34} />
+                </div>
+            }
+        >
+            <CustomerDashboardContent />
+        </Suspense>
     );
 }

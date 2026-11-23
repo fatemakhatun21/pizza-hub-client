@@ -290,7 +290,7 @@ export default function VendorOrdersPage() {
                             </div>
                         ) : (
                             <div className="overflow-x-auto">
-                                <table className="w-full min-w-[900px] text-left">
+                                <table className="w-full min-w-[1050px] text-left">
                                     <thead className="bg-[#FFF8ED] text-sm">
                                         <tr>
                                             <th className="p-4">Pizza</th>
@@ -298,6 +298,7 @@ export default function VendorOrdersPage() {
                                             <th className="p-4">Quantity</th>
                                             <th className="p-4">Total</th>
                                             <th className="p-4">Delivery</th>
+                                            <th className="p-4">Special Instructions</th>
                                             <th className="p-4">Status</th>
                                             <th className="p-4">Actions</th>
                                         </tr>
@@ -342,6 +343,10 @@ export default function VendorOrdersPage() {
                                                         <p className="mt-1 text-xs text-gray-500">
                                                             {new Date(order.deliveryDate).toLocaleDateString()}
                                                         </p>
+                                                    </td>
+
+                                                    <td className="max-w-[220px] p-4 text-sm text-gray-600">
+                                                        {order.message || "—"}
                                                     </td>
 
                                                     <td className="p-4">

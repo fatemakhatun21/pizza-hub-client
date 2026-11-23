@@ -3,10 +3,11 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { authClient } from "@/lib/auth-client";
 import { apiFetch, readApiError } from "@/lib/api";
+import { useAuthGuard } from "@/lib/use-auth-guard";
 import { toast } from "sonner";
 import ImageUpload from "@/components/vendor/ImageUpload";
+import { VENDOR_CATEGORIES } from "@/lib/menuCategories";
 import { ArrowLeft, Loader2, Pizza } from "lucide-react";
 
 const initialForm = {
@@ -16,11 +17,12 @@ const initialForm = {
     price: "",
     location: "",
     image: "",
+    images: [],
 };
 
 export default function AddPizzaPage() {
     const router = useRouter();
-    const { data: session, isPending } = authClient.useSession();
+    const { ready, allowed, message, isPending } = useAuthGuard("vendor");
 
     const [form, setForm] = useState(initialForm);
     const [loading, setLoading] = useState(false);
@@ -45,6 +47,13 @@ export default function AddPizzaPage() {
             return;
         }
 
+        if (!form.images.length) {
+            const message = "Please upload at least one pizza image.";
+            setError(message);
+            toast.error(message);
+            return;
+        }
+
         setLoading(true);
 
         try {
@@ -56,7 +65,8 @@ export default function AddPizzaPage() {
                     category: form.category,
                     price,
                     location: form.location.trim(),
-                    image: form.image.trim(),
+                    image: form.images[0],
+                    images: form.images,
                 }),
             });
 
@@ -77,7 +87,7 @@ export default function AddPizzaPage() {
         }
     };
 
-    if (isPending) {
+    if (isPending || !ready) {
         return (
             <div className="flex min-h-[60vh] items-center justify-center">
                 <Loader2 className="animate-spin text-[#C93425]" />
@@ -85,12 +95,13 @@ export default function AddPizzaPage() {
         );
     }
 
-    if (!session?.user) {
+    if (!allowed) {
         return (
             <main className="px-5 py-20 text-center">
-                <h1 className="text-2xl font-bold">
-                    Please sign in first
-                </h1>
+                <h1 className="text-2xl font-bold">Access unavailable</h1>
+                <p className="mt-3 text-gray-500">
+                    {message || "Only vendor accounts can add pizzas."}
+                </p>
                 <Link href="/login" className="mt-4 inline-block text-[#C93425]">
                     Sign In
                 </Link>
@@ -174,11 +185,9 @@ export default function AddPizzaPage() {
                                     onChange={handleChange}
                                     className="w-full rounded-xl border border-gray-200 p-3"
                                 >
-                                    <option>Classic Pizzas</option>
-                                    <option>Vegetarian Pizzas</option>
-                                    <option>Meat Lovers</option>
-                                    <option>Specialty Pizzas</option>
-                                    <option>Sides & Appetizers</option>
+                                    {VENDOR_CATEGORIES.map((category) => (
+                                        <option key={category}>{category}</option>
+                                    ))}
                                 </select>
                             </div>
 
@@ -217,9 +226,14 @@ export default function AddPizzaPage() {
                         </div>
 
                         <ImageUpload
-                            value={form.image}
-                            onChange={(url) =>
-                                setForm((prev) => ({ ...prev, image: url }))
+                            multiple
+                            value={form.images}
+                            onChange={(images) =>
+                                setForm((prev) => ({
+                                    ...prev,
+                                    images,
+                                    image: images[0] || "",
+                                }))
                             }
                         />
 

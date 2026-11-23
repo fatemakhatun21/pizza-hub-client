@@ -3,16 +3,21 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { authClient } from "@/lib/auth-client";
 import { apiFetch, readApiError } from "@/lib/api";
+import { useAuthGuard } from "@/lib/use-auth-guard";
 import { toast } from "sonner";
 import ImageUpload from "@/components/vendor/ImageUpload";
+import {
+    VENDOR_CATEGORIES,
+    normalizeCategoryName,
+} from "@/lib/menuCategories";
 import { ArrowLeft, Loader2, Save } from "lucide-react";
 
 export default function EditPizzaPage() {
     const router = useRouter();
     const { id } = useParams();
-    const { data: session, isPending } = authClient.useSession();
+    const { ready, allowed, message, session, isPending } =
+        useAuthGuard("vendor");
     const userId = session?.user?.id;
 
     const [form, setForm] = useState({
@@ -22,6 +27,7 @@ export default function EditPizzaPage() {
         price: "",
         location: "",
         image: "",
+        images: [],
     });
 
     const [loading, setLoading] = useState(true);
@@ -29,9 +35,7 @@ export default function EditPizzaPage() {
     const [error, setError] = useState("");
 
     useEffect(() => {
-        if (isPending) return;
-
-        if (!userId) return;
+        if (isPending || !ready || !allowed || !userId) return;
 
         const loadPizza = async () => {
             try {
@@ -54,10 +58,16 @@ export default function EditPizzaPage() {
                 setForm({
                     name: pizza.name || "",
                     description: pizza.description || "",
-                    category: pizza.category || "Classic Pizzas",
+                    category: normalizeCategoryName(pizza.category) || "Classic Pizzas",
                     price: String(pizza.price ?? ""),
                     location: pizza.location || "",
                     image: pizza.image || "",
+                    images:
+                        Array.isArray(pizza.images) && pizza.images.length
+                            ? pizza.images
+                            : pizza.image
+                              ? [pizza.image]
+                              : [],
                 });
             } catch (err) {
                 setError(err.message);
@@ -68,7 +78,7 @@ export default function EditPizzaPage() {
         };
 
         loadPizza();
-    }, [id, userId, isPending]);
+    }, [id, userId, isPending, ready, allowed]);
 
     const handleChange = (e) => {
         setForm((prev) => ({
@@ -89,6 +99,13 @@ export default function EditPizzaPage() {
             return;
         }
 
+        if (!form.images.length) {
+            const message = "Please upload at least one pizza image.";
+            setError(message);
+            toast.error(message);
+            return;
+        }
+
         setSaving(true);
 
         try {
@@ -100,7 +117,8 @@ export default function EditPizzaPage() {
                     category: form.category,
                     price,
                     location: form.location.trim(),
-                    image: form.image.trim(),
+                    image: form.images[0],
+                    images: form.images,
                 }),
             });
 
@@ -121,7 +139,7 @@ export default function EditPizzaPage() {
         }
     };
 
-    const showLoading = isPending || (Boolean(userId) && loading);
+    const showLoading = isPending || !ready || (Boolean(userId) && loading);
 
     if (showLoading) {
         return (
@@ -131,10 +149,13 @@ export default function EditPizzaPage() {
         );
     }
 
-    if (!session?.user) {
+    if (!allowed) {
         return (
             <main className="px-5 py-20 text-center">
-                <h1 className="text-2xl font-bold">Please sign in first</h1>
+                <h1 className="text-2xl font-bold">Access unavailable</h1>
+                <p className="mt-3 text-gray-500">
+                    {message || "Only vendor accounts can edit pizzas."}
+                </p>
                 <Link href="/login" className="mt-4 inline-block text-[#C93425]">
                     Sign In
                 </Link>
@@ -224,11 +245,9 @@ export default function EditPizzaPage() {
                                 onChange={handleChange}
                                 className="w-full rounded-xl border border-gray-200 p-3"
                             >
-                                <option>Classic Pizzas</option>
-                                <option>Vegetarian Pizzas</option>
-                                <option>Meat Lovers</option>
-                                <option>Specialty Pizzas</option>
-                                <option>Sides & Appetizers</option>
+                                {VENDOR_CATEGORIES.map((category) => (
+                                    <option key={category}>{category}</option>
+                                ))}
                             </select>
                         </div>
 
@@ -248,9 +267,14 @@ export default function EditPizzaPage() {
                             />
                         </div>
                         <ImageUpload
-                            value={form.image}
-                            onChange={(url) =>
-                                setForm((prev) => ({ ...prev, image: url }))
+                            multiple
+                            value={form.images}
+                            onChange={(images) =>
+                                setForm((prev) => ({
+                                    ...prev,
+                                    images,
+                                    image: images[0] || "",
+                                }))
                             }
                         />
 

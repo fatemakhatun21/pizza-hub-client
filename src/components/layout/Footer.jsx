@@ -2,8 +2,6 @@ import Image from "next/image";
 import Link from "next/link";
 import {
     MapPin,
-    Mail,
-    Phone,
     ArrowUpRight,
     Pizza,
 } from "lucide-react";
@@ -125,26 +123,11 @@ export default function Footer() {
                                 <span>Dhaka, Bangladesh</span>
                             </div>
 
-                            <a
-                                href="mailto:hello@pizzahub.example"
-                                className="flex items-center gap-3 transition-colors hover:text-white"
-                            >
-                                <Mail
-                                    size={19}
-                                    className="shrink-0 text-[#F06445]"
-                                />
-                                <span className="break-all">
-                                    hello@pizzahub.example
-                                </span>
-                            </a>
-
-                            <div className="flex items-center gap-3">
-                                <Phone
-                                    size={19}
-                                    className="shrink-0 text-[#F06445]"
-                                />
-                                <span>Contact details coming soon</span>
-                            </div>
+                            <p className="text-sm leading-6 text-[#C9BDB5]">
+                                Need help with an order? Sign in to view your
+                                order status and contact the restaurant using
+                                your order information.
+                            </p>
                         </div>
                     </div>
                 </div>

@@ -44,6 +44,13 @@ export default function WishlistButton({
                 return;
             }
 
+            if (response.status === 403) {
+                // Wishlist is customer-only. The control should already be hidden
+                // for other roles, so a stale view is just a silent no-op.
+                setSavedOverride(!nextSaved);
+                return;
+            }
+
             if (!response.ok) {
                 throw new Error(
                     await readApiError(

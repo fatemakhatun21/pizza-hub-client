@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { authClient } from "@/lib/auth-client";
+import { useAuthGuard } from "@/lib/use-auth-guard";
 import { apiFetch, readApiError } from "@/lib/api";
 import { toast } from "sonner";
 import { ArrowLeft, Loader2, ShoppingBag } from "lucide-react";
@@ -11,12 +11,19 @@ import { ArrowLeft, Loader2, ShoppingBag } from "lucide-react";
 export default function OrderPage() {
     const { id } = useParams();
     const router = useRouter();
-    const { data: session, isPending } = authClient.useSession();
+    const {
+        ready,
+        allowed,
+        message,
+        session,
+        isPending,
+    } = useAuthGuard("customer");
 
     const [form, setForm] = useState({
         quantity: 1,
         deliveryAddress: "",
         deliveryDate: "",
+        message: "",
     });
 
     const [loading, setLoading] = useState(false);
@@ -40,6 +47,8 @@ export default function OrderPage() {
                     deliveryDate: new Date(
                         `${form.deliveryDate}T12:00:00`
                     ).toISOString(),
+                    deliveryDateKey: form.deliveryDate,
+                    message: form.message.trim(),
                 }),
             });
 
@@ -58,7 +67,7 @@ export default function OrderPage() {
         }
     };
 
-    if (isPending) {
+    if (isPending || (session?.user && !ready)) {
         return (
             <div className="flex min-h-[60vh] items-center justify-center">
                 <Loader2 className="animate-spin text-[#C93425]" />
@@ -67,13 +76,32 @@ export default function OrderPage() {
     }
 
     if (!session?.user) {
+        const orderPath = `/order/${id}`;
+
         return (
             <main className="px-5 py-20 text-center">
                 <h1 className="text-2xl font-bold">
                     Please sign in to order
                 </h1>
-                <Link href="/login" className="mt-4 inline-block text-[#C93425]">
+                <Link
+                    href={`/login?callbackUrl=${encodeURIComponent(orderPath)}`}
+                    className="mt-4 inline-block text-[#C93425]"
+                >
                     Sign In
+                </Link>
+            </main>
+        );
+    }
+
+    if (!allowed) {
+        return (
+            <main className="px-5 py-20 text-center">
+                <h1 className="text-2xl font-bold">
+                    Only customers can place orders
+                </h1>
+                <p className="mt-3 text-gray-500">{message}</p>
+                <Link href="/menu" className="mt-5 inline-block text-[#C93425]">
+                    Back to Menu
                 </Link>
             </main>
         );
@@ -165,6 +193,26 @@ export default function OrderPage() {
                                     setForm({
                                         ...form,
                                         deliveryDate: e.target.value,
+                                    })
+                                }
+                                className="w-full rounded-xl border p-3"
+                            />
+                        </div>
+
+                        <div>
+                            <label htmlFor="message" className="mb-2 block font-semibold">
+                                Special Instructions <span className="font-normal text-gray-500">(optional)</span>
+                            </label>
+                            <textarea
+                                id="message"
+                                rows={3}
+                                maxLength={500}
+                                placeholder="Extra sauce, no onions, delivery notes..."
+                                value={form.message}
+                                onChange={(e) =>
+                                    setForm({
+                                        ...form,
+                                        message: e.target.value,
                                     })
                                 }
                                 className="w-full rounded-xl border p-3"

@@ -19,6 +19,7 @@ import {
 import { toast } from "sonner";
 import { authClient } from "@/lib/auth-client";
 import { apiFetch } from "@/lib/api";
+import { isPremiumAccount } from "@/lib/premium";
 import ThemeToggle from "@/components/theme/ThemeToggle";
 
 export default function Navbar() {
@@ -100,8 +101,7 @@ export default function Navbar() {
             : null;
 
     const isPremium =
-        role === "vendor" &&
-        Boolean(account?.isPremium === true || account?.plan === "premium");
+        role === "vendor" && isPremiumAccount(account);
 
     const dashboardHref =
         role === "admin"

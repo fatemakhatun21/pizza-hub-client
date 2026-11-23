@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { apiFetch, readApiError } from "@/lib/api";
+import { isPremiumAccount } from "@/lib/premium";
 
 function isValidImageUrl(value) {
     try {
@@ -183,7 +184,7 @@ export default function ProfilePage() {
                             {user.name || "PizzaHub User"}
                         </h1>
 
-                        {user.isPremium && (
+                        {isPremiumAccount(user) && (
                             <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-700">
                                 <Crown size={14} /> Premium
                             </span>

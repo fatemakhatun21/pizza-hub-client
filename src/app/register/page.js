@@ -18,6 +18,18 @@ import {
     Loader2,
 } from "lucide-react";
 
+function validatePassword(password) {
+    if (
+        password.length < 6 ||
+        !/[A-Z]/.test(password) ||
+        !/[a-z]/.test(password)
+    ) {
+        return "Password must be at least 6 characters and include one uppercase and one lowercase letter.";
+    }
+
+    return "";
+}
+
 export default function RegisterPage() {
     const router = useRouter();
 
@@ -53,10 +65,11 @@ export default function RegisterPage() {
             return;
         }
 
-        if (form.password.length < 6) {
-            const message = "Password must be at least 6 characters.";
-            setError(message);
-            toast.error(message);
+        const passwordError = validatePassword(form.password);
+
+        if (passwordError) {
+            setError(passwordError);
+            toast.error(passwordError);
             return;
         }
 

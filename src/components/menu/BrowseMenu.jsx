@@ -17,35 +17,45 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
+import { authClient } from "@/lib/auth-client";
 import { apiFetch, readApiError } from "@/lib/api";
-import WishlistButton from "@/components/menu/WishlistButton";
+import { isPremiumAccount } from "@/lib/premium";
+import {
+    MENU_CATEGORIES as categories,
+    normalizeCategoryName,
+} from "@/lib/menuCategories";
+import WishlistInitialState from "@/components/menu/WishlistInitialState";
 
-const categories = [
-    "All Categories",
-    "Classic Pizzas",
-    "Vegetarian Pizzas",
-    "Meat Lovers",
-    "Specialty / Gourmet Pizzas",
-    "Specialty Pizzas",
-    "Sides & Appetizers",
-    "Beverages & Desserts",
-];
+const SORT_QUERY = {
+    default: "default",
+    low: "price_asc",
+    high: "price_desc",
+    newest: "newest",
+};
+
+const SEARCH_DEBOUNCE_MS = 200;
 
 export default function BrowseMenu() {
     const searchParams = useSearchParams();
     const urlCategory = searchParams.get("category");
 
+    const { data: session } = authClient.useSession();
+    const sessionUserId = session?.user?.id;
+
     const [menuItems, setMenuItems] = useState([]);
+    const [baselineItems, setBaselineItems] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
 
     const [search, setSearch] = useState("");
+    const [debouncedSearch, setDebouncedSearch] = useState("");
     const [categoryOverride, setCategoryOverride] = useState({
         source: null,
         value: "All Categories",
     });
     const [location, setLocation] = useState("All Locations");
     const [sort, setSort] = useState("default");
+    const [roleByUser, setRoleByUser] = useState({ userId: null, role: null });
 
     const urlCategoryValue = categories.includes(urlCategory)
         ? urlCategory
@@ -59,6 +69,78 @@ export default function BrowseMenu() {
     const setCategory = (value) =>
         setCategoryOverride({ source: urlCategory, value });
 
+    const role = roleByUser.userId === sessionUserId ? roleByUser.role : null;
+
+    useEffect(() => {
+        if (!sessionUserId) return;
+
+        const controller = new AbortController();
+
+        async function loadRole() {
+            try {
+                const response = await apiFetch("/api/me", {
+                    signal: controller.signal,
+                });
+
+                if (!response.ok) {
+                    if (!controller.signal.aborted) {
+                        setRoleByUser({ userId: sessionUserId, role: null });
+                    }
+                    return;
+                }
+
+                const data = await response.json();
+
+                if (!controller.signal.aborted) {
+                    setRoleByUser({
+                        userId: sessionUserId,
+                        role: data?.user?.role ?? data?.role ?? null,
+                    });
+                }
+            } catch {
+                // Keep the neutral role; wishlist controls stay hidden.
+            }
+        }
+
+        loadRole();
+
+        return () => controller.abort();
+    }, [sessionUserId]);
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setDebouncedSearch(search.trim());
+        }, SEARCH_DEBOUNCE_MS);
+
+        return () => clearTimeout(timer);
+    }, [search]);
+
+    useEffect(() => {
+        const controller = new AbortController();
+
+        async function fetchBaseline() {
+            try {
+                const response = await apiFetch("/api/menu", {
+                    signal: controller.signal,
+                });
+
+                if (!response.ok) return;
+
+                const data = await response.json();
+
+                if (!controller.signal.aborted && Array.isArray(data)) {
+                    setBaselineItems(data);
+                }
+            } catch {
+                // Location options fall back to the currently loaded results.
+            }
+        }
+
+        fetchBaseline();
+
+        return () => controller.abort();
+    }, []);
+
     useEffect(() => {
         const controller = new AbortController();
 
@@ -67,9 +149,27 @@ export default function BrowseMenu() {
                 setLoading(true);
                 setError("");
 
-                const response = await apiFetch("/api/menu", {
-                    signal: controller.signal,
-                });
+                const params = new URLSearchParams();
+
+                if (debouncedSearch) {
+                    params.set("search", debouncedSearch);
+                }
+
+                if (category !== "All Categories") {
+                    params.set("category", category);
+                }
+
+                if (location !== "All Locations") {
+                    params.set("location", location);
+                }
+
+                params.set("sort", SORT_QUERY[sort] ?? "default");
+
+                const query = params.toString();
+                const response = await apiFetch(
+                    `/api/menu${query ? `?${query}` : ""}`,
+                    { signal: controller.signal }
+                );
 
                 if (!response.ok) {
                     throw new Error(
@@ -103,53 +203,20 @@ export default function BrowseMenu() {
         fetchMenu();
 
         return () => controller.abort();
-    }, []);
+    }, [debouncedSearch, category, location, sort]);
 
     const locations = useMemo(() => {
+        const source = baselineItems.length > 0 ? baselineItems : menuItems;
         const unique = [
-            ...new Set(
-                menuItems.map((item) => item.location).filter(Boolean)
-            ),
+            ...new Set(source.map((item) => item.location).filter(Boolean)),
         ];
 
+        if (location !== "All Locations" && !unique.includes(location)) {
+            unique.push(location);
+        }
+
         return ["All Locations", ...unique.sort()];
-    }, [menuItems]);
-
-    const filteredItems = useMemo(() => {
-        const results = menuItems.filter((item) => {
-            const matchesSearch = (item.name || "")
-                .toLowerCase()
-                .includes(search.trim().toLowerCase());
-
-            const matchesCategory =
-                category === "All Categories" ||
-                item.category === category;
-
-            const matchesLocation =
-                location === "All Locations" ||
-                item.location === location;
-
-            return (
-                matchesSearch &&
-                matchesCategory &&
-                matchesLocation
-            );
-        });
-
-        if (sort === "low") {
-            results.sort(
-                (a, b) => Number(a.price) - Number(b.price)
-            );
-        }
-
-        if (sort === "high") {
-            results.sort(
-                (a, b) => Number(b.price) - Number(a.price)
-            );
-        }
-
-        return results;
-    }, [menuItems, search, category, location, sort]);
+    }, [baselineItems, menuItems, location]);
 
     const resetFilters = () => {
         setSearch("");
@@ -253,7 +320,7 @@ export default function BrowseMenu() {
                     <p className="font-medium text-[#6B625C]">
                         Showing{" "}
                         <span className="font-bold text-[#C93425]">
-                            {loading ? "..." : filteredItems.length}
+                            {loading ? "..." : menuItems.length}
                         </span>{" "}
                         delicious items
                     </p>
@@ -268,14 +335,7 @@ export default function BrowseMenu() {
                     </button>
                 </div>
 
-                {loading ? (
-                    <div className="flex justify-center py-24">
-                        <Loader2
-                            size={36}
-                            className="animate-spin text-[#C93425]"
-                        />
-                    </div>
-                ) : error ? (
+                {error ? (
                     <div
                         role="alert"
                         className="rounded-3xl bg-white px-6 py-16 text-center"
@@ -289,9 +349,16 @@ export default function BrowseMenu() {
                             Try Again
                         </button>
                     </div>
-                ) : filteredItems.length > 0 ? (
+                ) : loading && menuItems.length === 0 ? (
+                    <div className="flex justify-center py-24">
+                        <Loader2
+                            size={36}
+                            className="animate-spin text-[#C93425]"
+                        />
+                    </div>
+                ) : menuItems.length > 0 ? (
                     <div className="grid gap-7 sm:grid-cols-2 lg:grid-cols-3">
-                        {filteredItems.map((item) => (
+                        {menuItems.map((item) => (
                             <article
                                 key={item._id}
                                 className="group overflow-hidden rounded-2xl border border-orange-100 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-xl"
@@ -308,14 +375,13 @@ export default function BrowseMenu() {
 
                                     <div className="absolute left-4 top-4 flex flex-col items-start gap-2">
                                         <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-[#C93425]">
-                                            {item.category}
+                                            {normalizeCategoryName(item.category)}
                                         </span>
 
-                                        {(item.vendorPlan === "premium" ||
+                                        {(isPremiumAccount(item) ||
                                             item.isFeatured) && (
                                             <div className="flex flex-wrap gap-2">
-                                                {item.vendorPlan ===
-                                                    "premium" && (
+                                                {isPremiumAccount(item) && (
                                                     <span
                                                         aria-label="Premium vendor"
                                                         className="inline-flex items-center gap-1 rounded-full bg-[#25201D] px-3 py-1 text-xs font-semibold text-[#FFD27A]"
@@ -338,8 +404,9 @@ export default function BrowseMenu() {
                                         )}
                                     </div>
 
-                                    <WishlistButton
+                                    <WishlistInitialState
                                         pizzaId={item._id}
+                                        role={role}
                                         className="absolute right-4 top-4 z-10"
                                     />
                                 </div>

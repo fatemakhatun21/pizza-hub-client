@@ -7,6 +7,7 @@ import DashboardShell from "@/components/layout/DashboardShell";
 import { BarChart, DonutChart, LineChart } from "@/components/dashboard/Charts";
 import { authClient } from "@/lib/auth-client";
 import { apiFetch, readApiError } from "@/lib/api";
+import { VENDOR_CATEGORIES } from "@/lib/menuCategories";
 import {
     Users,
     ShoppingBag,
@@ -17,13 +18,41 @@ import {
     Pizza,
     Loader2,
     RefreshCw,
+    Eye,
+    EyeOff,
+    Trash2,
 } from "lucide-react";
+
+const EMPTY_MENU_FILTERS = {
+    search: "",
+    status: "",
+    category: "",
+    location: "",
+    sort: "newest",
+};
+
+function VisibilityFlag({ value, whenTrue, whenFalse }) {
+    const known = typeof value === "boolean";
+
+    return (
+        <span
+            className={
+                known && value
+                    ? "font-semibold text-green-700"
+                    : "text-gray-500"
+            }
+        >
+            {known ? (value ? whenTrue : whenFalse) : "Unknown"}
+        </span>
+    );
+}
 
 export default function AdminDashboard() {
     const { data: session, isPending } = authClient.useSession();
     const userId = session?.user?.id;
 
     const [pizzas, setPizzas] = useState([]);
+    const [menuFilters, setMenuFilters] = useState(EMPTY_MENU_FILTERS);
     const [adminStats, setAdminStats] = useState(null);
     const [loading, setLoading] = useState(true);
     const [processingId, setProcessingId] = useState(null);
@@ -34,7 +63,16 @@ export default function AdminDashboard() {
         setError("");
 
         try {
-            const response = await apiFetch("/api/admin/menu");
+            const params = new URLSearchParams();
+
+            Object.entries(menuFilters).forEach(([key, value]) => {
+                if (value) params.set(key, value);
+            });
+
+            const query = params.toString();
+            const response = await apiFetch(
+                `/api/admin/menu${query ? `?${query}` : ""}`
+            );
 
             if (!response.ok) {
                 throw new Error(
@@ -48,7 +86,7 @@ export default function AdminDashboard() {
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [menuFilters]);
 
     const fetchAdminStats = useCallback(async () => {
         try {
@@ -61,6 +99,10 @@ export default function AdminDashboard() {
             // The overview endpoint is optional; local counts are used instead.
         }
     }, []);
+
+    const updateFilter = (key, value) => {
+        setMenuFilters((previous) => ({ ...previous, [key]: value }));
+    };
 
     useEffect(() => {
         if (isPending || !userId) return;
@@ -89,6 +131,75 @@ export default function AdminDashboard() {
             }
 
             toast.success(`Pizza ${status} successfully.`);
+            await Promise.all([fetchPizzas(), fetchAdminStats()]);
+        } catch (err) {
+            toast.error(err.message);
+        } finally {
+            setProcessingId(null);
+        }
+    };
+
+    const handleAvailability = async (pizza) => {
+        if (pizza.status !== "approved" || processingId !== null) return;
+
+        // The endpoint's `isActive` body field now maps to adminPublished.
+        // Vendor availability stays vendor-owned and is not changed here.
+        const nextAdminPublished = pizza.adminPublished !== true;
+        setProcessingId(pizza._id);
+
+        try {
+            const response = await apiFetch(
+                `/api/admin/menu/${pizza._id}/availability`,
+                {
+                    method: "PATCH",
+                    body: JSON.stringify({ isActive: nextAdminPublished }),
+                }
+            );
+
+            if (!response.ok) {
+                throw new Error(
+                    await readApiError(
+                        response,
+                        "Failed to update admin visibility."
+                    )
+                );
+            }
+
+            toast.success(
+                nextAdminPublished
+                    ? "Admin visibility enabled for this pizza."
+                    : "Admin visibility disabled for this pizza."
+            );
+            await Promise.all([fetchPizzas(), fetchAdminStats()]);
+        } catch (err) {
+            toast.error(err.message);
+        } finally {
+            setProcessingId(null);
+        }
+    };
+
+    const handleDelete = async (pizza) => {
+        if (
+            processingId !== null ||
+            !window.confirm(`Delete "${pizza.name}"? This cannot be undone.`)
+        ) {
+            return;
+        }
+
+        setProcessingId(pizza._id);
+
+        try {
+            const response = await apiFetch(`/api/admin/menu/${pizza._id}`, {
+                method: "DELETE",
+            });
+
+            if (!response.ok) {
+                throw new Error(
+                    await readApiError(response, "Failed to delete pizza.")
+                );
+            }
+
+            toast.success("Pizza deleted.");
             await Promise.all([fetchPizzas(), fetchAdminStats()]);
         } catch (err) {
             toast.error(err.message);
@@ -163,6 +274,21 @@ export default function AdminDashboard() {
             title: "Total Users",
             value: Number(adminStats?.users?.total ?? 0),
             icon: Users,
+        },
+        {
+            title: "Vendors",
+            value: Number(adminStats?.users?.vendors ?? 0),
+            icon: Users,
+        },
+        {
+            title: "Customers",
+            value: Number(adminStats?.users?.customers ?? 0),
+            icon: Users,
+        },
+        {
+            title: "Transactions",
+            value: Number(adminStats?.transactions?.total ?? 0),
+            icon: Wallet,
         },
         {
             title: "Total Orders",
@@ -269,7 +395,7 @@ export default function AdminDashboard() {
                     </div>
 
                     {adminStats && (
-                        <div className="mb-9 grid gap-5 sm:grid-cols-3">
+                        <div className="mb-9 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
                             {platformCards.map((stat) => {
                                 const Icon = stat.icon;
 
@@ -314,6 +440,128 @@ export default function AdminDashboard() {
                         />
                     </div>
 
+                    <section className="mb-9 rounded-2xl border border-orange-100 bg-white p-6 shadow-sm">
+                        <h2 className="mb-5 text-xl font-bold">
+                            Filter pizzas
+                        </h2>
+
+                        <div className="grid gap-4 md:grid-cols-5">
+                            <div>
+                                <label
+                                    htmlFor="admin-menu-search"
+                                    className="mb-2 block text-sm font-semibold"
+                                >
+                                    Search
+                                </label>
+                                <input
+                                    id="admin-menu-search"
+                                    type="search"
+                                    value={menuFilters.search}
+                                    onChange={(event) =>
+                                        updateFilter("search", event.target.value)
+                                    }
+                                    placeholder="Name or description"
+                                    className="w-full rounded-xl border border-gray-200 p-3 text-sm"
+                                />
+                            </div>
+
+                            <div>
+                                <label
+                                    htmlFor="admin-menu-status"
+                                    className="mb-2 block text-sm font-semibold"
+                                >
+                                    Status
+                                </label>
+                                <select
+                                    id="admin-menu-status"
+                                    value={menuFilters.status}
+                                    onChange={(event) =>
+                                        updateFilter("status", event.target.value)
+                                    }
+                                    className="w-full rounded-xl border border-gray-200 p-3 text-sm"
+                                >
+                                    <option value="">All statuses</option>
+                                    <option value="pending">Pending</option>
+                                    <option value="approved">Approved</option>
+                                    <option value="rejected">Rejected</option>
+                                    <option value="inactive">Inactive</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label
+                                    htmlFor="admin-menu-category"
+                                    className="mb-2 block text-sm font-semibold"
+                                >
+                                    Category
+                                </label>
+                                <select
+                                    id="admin-menu-category"
+                                    value={menuFilters.category}
+                                    onChange={(event) =>
+                                        updateFilter("category", event.target.value)
+                                    }
+                                    className="w-full rounded-xl border border-gray-200 p-3 text-sm"
+                                >
+                                    <option value="">All categories</option>
+                                    {VENDOR_CATEGORIES.map((category) => (
+                                        <option key={category} value={category}>
+                                            {category}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div>
+                                <label
+                                    htmlFor="admin-menu-location"
+                                    className="mb-2 block text-sm font-semibold"
+                                >
+                                    Location
+                                </label>
+                                <input
+                                    id="admin-menu-location"
+                                    type="search"
+                                    value={menuFilters.location}
+                                    onChange={(event) =>
+                                        updateFilter("location", event.target.value)
+                                    }
+                                    placeholder="e.g. Dhanmondi"
+                                    className="w-full rounded-xl border border-gray-200 p-3 text-sm"
+                                />
+                            </div>
+
+                            <div>
+                                <label
+                                    htmlFor="admin-menu-sort"
+                                    className="mb-2 block text-sm font-semibold"
+                                >
+                                    Sort
+                                </label>
+                                <select
+                                    id="admin-menu-sort"
+                                    value={menuFilters.sort}
+                                    onChange={(event) =>
+                                        updateFilter("sort", event.target.value)
+                                    }
+                                    className="w-full rounded-xl border border-gray-200 p-3 text-sm"
+                                >
+                                    <option value="newest">Newest first</option>
+                                    <option value="price_asc">Price: low to high</option>
+                                    <option value="price_desc">Price: high to low</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <button
+                            type="button"
+                            onClick={() => setMenuFilters(EMPTY_MENU_FILTERS)}
+                            className="mt-4 rounded-full border border-[#C93425] px-5 py-2 text-sm font-semibold text-[#C93425]"
+                        >
+                            Clear filters
+                        </button>
+                    </section>
+
                     <section className="rounded-2xl border border-orange-100 bg-white p-6 shadow-sm">
                         <h2 className="mb-6 text-xl font-bold">
                             All Pizza Submissions
@@ -332,13 +580,14 @@ export default function AdminDashboard() {
                             </p>
                         ) : (
                             <div className="overflow-x-auto">
-                                <table className="w-full min-w-[750px] text-left">
+                                <table className="w-full min-w-[900px] text-left">
                                     <thead className="bg-[#FFF8ED] text-sm">
                                         <tr>
                                             <th className="p-4">Pizza</th>
                                             <th className="p-4">Vendor</th>
                                             <th className="p-4">Price</th>
                                             <th className="p-4">Status</th>
+                                            <th className="p-4">Visibility</th>
                                             <th className="p-4">Actions</th>
                                         </tr>
                                     </thead>
@@ -365,9 +614,114 @@ export default function AdminDashboard() {
                                                     {pizza.status}
                                                 </td>
 
+                                                <td className="p-4 text-xs">
+                                                    <div className="space-y-1">
+                                                        <p>
+                                                            Admin:{" "}
+                                                            <VisibilityFlag
+                                                                value={
+                                                                    pizza.adminPublished
+                                                                }
+                                                                whenTrue="Visible"
+                                                                whenFalse="Hidden"
+                                                            />
+                                                        </p>
+                                                        <p>
+                                                            Vendor:{" "}
+                                                            <VisibilityFlag
+                                                                value={
+                                                                    pizza.isActive
+                                                                }
+                                                                whenTrue="Available"
+                                                                whenFalse="Unavailable"
+                                                            />
+                                                        </p>
+                                                        <p>
+                                                            Public:{" "}
+                                                            <VisibilityFlag
+                                                                value={
+                                                                    pizza.publiclyVisible
+                                                                }
+                                                                whenTrue="Visible"
+                                                                whenFalse="Hidden"
+                                                            />
+                                                        </p>
+                                                    </div>
+                                                </td>
+
                                                 <td className="p-4">
-                                                    {pizza.status === "pending" ? (
-                                                        <div className="flex gap-2">
+                                                    <div className="flex flex-wrap gap-2">
+                                                        {pizza.status ===
+                                                            "pending" && (
+                                                            <>
+                                                                <button
+                                                                    type="button"
+                                                                    disabled={processingId !== null}
+                                                                    onClick={() =>
+                                                                        handleReview(
+                                                                            pizza._id,
+                                                                            "approved"
+                                                                        )
+                                                                    }
+                                                                    className="rounded-lg bg-green-600 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                                                                >
+                                                                    Approve
+                                                                </button>
+
+                                                                <button
+                                                                    type="button"
+                                                                    disabled={processingId !== null}
+                                                                    onClick={() =>
+                                                                        handleReview(
+                                                                            pizza._id,
+                                                                            "rejected"
+                                                                        )
+                                                                    }
+                                                                    className="rounded-lg bg-red-600 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                                                                >
+                                                                    Reject
+                                                                </button>
+                                                            </>
+                                                        )}
+
+                                                        {pizza.status ===
+                                                            "approved" && (
+                                                            <>
+                                                                <button
+                                                                    type="button"
+                                                                    disabled={processingId !== null}
+                                                                    onClick={() =>
+                                                                        handleReview(
+                                                                            pizza._id,
+                                                                            "inactive"
+                                                                        )
+                                                                    }
+                                                                    title="Remove this published pizza from public ordering."
+                                                                    className="rounded-lg border border-amber-300 px-3 py-2 text-sm font-semibold text-amber-700 disabled:opacity-50"
+                                                                >
+                                                                    Take Down
+                                                                </button>
+
+                                                                <button
+                                                                    type="button"
+                                                                    disabled={processingId !== null}
+                                                                    onClick={() =>
+                                                                        handleReview(
+                                                                            pizza._id,
+                                                                            "rejected"
+                                                                        )
+                                                                    }
+                                                                    className="rounded-lg bg-red-600 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                                                                >
+                                                                    Reject
+                                                                </button>
+                                                            </>
+                                                        )}
+
+                                                        {(pizza.status ===
+                                                            "rejected" ||
+                                                            pizza.status ===
+                                                                "inactive") && (
                                                             <button
                                                                 type="button"
                                                                 disabled={processingId !== null}
@@ -379,28 +733,49 @@ export default function AdminDashboard() {
                                                                 }
                                                                 className="rounded-lg bg-green-600 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50"
                                                             >
-                                                                Approve
+                                                                Restore
                                                             </button>
+                                                        )}
 
+                                                        {pizza.status ===
+                                                            "approved" && (
                                                             <button
                                                                 type="button"
                                                                 disabled={processingId !== null}
                                                                 onClick={() =>
-                                                                    handleReview(
-                                                                        pizza._id,
-                                                                        "rejected"
+                                                                    handleAvailability(
+                                                                        pizza
                                                                     )
                                                                 }
-                                                                className="rounded-lg bg-red-600 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                                                                title="Controls admin visibility only; vendor availability is managed by the vendor."
+                                                                aria-label={`${pizza.adminPublished ? "Unpublish" : "Publish"} (admin visibility) for ${pizza.name}`}
+                                                                className="inline-flex items-center gap-1 rounded-lg border border-[#C93425] px-3 py-2 text-sm font-semibold text-[#C93425] disabled:opacity-50"
                                                             >
-                                                                Reject
+                                                                {pizza.adminPublished ? (
+                                                                    <EyeOff size={15} />
+                                                                ) : (
+                                                                    <Eye size={15} />
+                                                                )}
+                                                                {pizza.adminPublished
+                                                                    ? "Unpublish (Admin)"
+                                                                    : "Publish (Admin)"}
                                                             </button>
-                                                        </div>
-                                                    ) : (
-                                                        <span className="text-sm text-gray-400">
-                                                            Reviewed
-                                                        </span>
-                                                    )}
+                                                        )}
+
+                                                        <button
+                                                            type="button"
+                                                            disabled={processingId !== null}
+                                                            onClick={() =>
+                                                                handleDelete(
+                                                                    pizza
+                                                                )
+                                                            }
+                                                            className="inline-flex items-center gap-1 rounded-lg border border-red-300 px-3 py-2 text-sm font-semibold text-red-600 disabled:opacity-50"
+                                                        >
+                                                            <Trash2 size={15} />
+                                                            Delete
+                                                        </button>
+                                                    </div>
                                                 </td>
                                             </tr>
                                         ))}

@@ -1,58 +1,103 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { toast } from "sonner";
-import { ImagePlus, Loader2 } from "lucide-react";
+import { ImagePlus, Loader2, X } from "lucide-react";
 import { apiFetch, readApiError } from "@/lib/api";
 
-export default function ImageUpload({ value, onChange }) {
+const MAX_IMAGES = 5;
+
+export default function ImageUpload({
+    value,
+    onChange,
+    multiple = false,
+    max = MAX_IMAGES,
+}) {
     const [uploading, setUploading] = useState(false);
     const [error, setError] = useState("");
 
+    const selectedImages = Array.isArray(value)
+        ? value.filter(Boolean)
+        : value
+          ? [value]
+          : [];
+
+    const emit = (nextImages) => {
+        onChange(multiple ? nextImages : nextImages[0] || "");
+    };
+
     const handleUpload = async (event) => {
-        const file = event.target.files?.[0];
-        if (!file) return;
+        const files = Array.from(event.target.files || []);
+        event.target.value = "";
+
+        if (!files.length) return;
+
+        const allowed = files.filter((file) =>
+            ["image/jpeg", "image/png", "image/webp"].includes(file.type)
+        );
+        const oversized = files.filter(
+            (file) => file.size > 5 * 1024 * 1024
+        );
 
         setError("");
 
-        if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
-            setError("Only JPG, PNG and WebP images are allowed.");
-            toast.error("Only JPG, PNG and WebP images are allowed.");
+        if (allowed.length !== files.length) {
+            const message = "Only JPG, PNG and WebP images are allowed.";
+            setError(message);
+            toast.error(message);
             return;
         }
 
-        if (file.size > 5 * 1024 * 1024) {
-            setError("Image must be smaller than 5MB.");
-            toast.error("Image must be smaller than 5MB.");
+        if (oversized.length) {
+            const message = "Each image must be smaller than 5MB.";
+            setError(message);
+            toast.error(message);
+            return;
+        }
+
+        if (selectedImages.length + files.length > max) {
+            const message = `You can upload at most ${max} images.`;
+            setError(message);
+            toast.error(message);
             return;
         }
 
         setUploading(true);
-        onChange("");
 
         try {
-            const formData = new FormData();
-            formData.append("image", file);
+            const uploaded = [];
 
-            const response = await apiFetch("/api/uploads/image", {
-                method: "POST",
-                body: formData,
-            });
+            for (const file of files) {
+                const formData = new FormData();
+                formData.append("image", file);
 
-            if (!response.ok) {
-                throw new Error(
-                    await readApiError(response, "Image upload failed.")
-                );
+                const response = await apiFetch("/api/uploads/image", {
+                    method: "POST",
+                    body: formData,
+                });
+
+                if (!response.ok) {
+                    throw new Error(
+                        await readApiError(response, "Image upload failed.")
+                    );
+                }
+
+                const data = await response.json();
+
+                if (!data.url) {
+                    throw new Error("Image URL was not returned.");
+                }
+
+                uploaded.push(data.url);
             }
 
-            const data = await response.json();
-
-            if (!data.url) {
-                throw new Error("Image URL was not returned.");
-            }
-
-            onChange(data.url);
-            toast.success("Image uploaded successfully.");
+            emit([...selectedImages, ...uploaded]);
+            toast.success(
+                uploaded.length === 1
+                    ? "Image uploaded successfully."
+                    : `${uploaded.length} images uploaded successfully.`
+            );
         } catch (err) {
             setError(err.message || "Image upload failed.");
             toast.error(err.message || "Image upload failed.");
@@ -61,17 +106,22 @@ export default function ImageUpload({ value, onChange }) {
         }
     };
 
+    const handleRemove = (index) => {
+        emit(selectedImages.filter((_, itemIndex) => itemIndex !== index));
+    };
+
     return (
         <div className="space-y-3">
             <label className="block font-semibold">
-                Pizza Image
+                Pizza Images{multiple ? " (up to 5)" : ""}
             </label>
 
             <input
                 type="file"
                 accept="image/jpeg,image/png,image/webp"
+                multiple={multiple}
                 onChange={handleUpload}
-                disabled={uploading}
+                disabled={uploading || selectedImages.length >= max}
                 className="w-full rounded-xl border border-gray-200 p-3 text-sm"
             />
 
@@ -88,22 +138,39 @@ export default function ImageUpload({ value, onChange }) {
                 </p>
             )}
 
-            {value && (
-                <div className="space-y-2">
-                    <img
-                        src={value}
-                        alt="Pizza preview"
-                        className="h-40 w-full rounded-xl object-cover"
-                    />
-                    <p className="text-sm text-green-600">
-                        Image uploaded successfully!
-                    </p>
+            {selectedImages.length > 0 && (
+                <div className="grid gap-3 sm:grid-cols-2">
+                    {selectedImages.map((src, index) => (
+                        <div
+                            key={`${src}-${index}`}
+                            className="relative overflow-hidden rounded-xl border border-gray-200"
+                        >
+                            <Image
+                                src={src}
+                                alt={`Pizza preview ${index + 1}`}
+                                width={400}
+                                height={240}
+                                unoptimized
+                                className="h-36 w-full object-cover"
+                            />
+
+                            <button
+                                type="button"
+                                onClick={() => handleRemove(index)}
+                                aria-label={`Remove image ${index + 1}`}
+                                className="absolute right-2 top-2 rounded-full bg-white/90 p-1 text-gray-700 shadow-sm hover:text-red-600"
+                            >
+                                <X size={16} />
+                            </button>
+                        </div>
+                    ))}
                 </div>
             )}
 
             <div className="flex items-center gap-2 text-xs text-gray-500">
                 <ImagePlus size={15} />
-                JPG, PNG or WebP — maximum 5MB
+                JPG, PNG or WebP — maximum 5MB each. The first image is used as the
+                card thumbnail.
             </div>
         </div>
     );
