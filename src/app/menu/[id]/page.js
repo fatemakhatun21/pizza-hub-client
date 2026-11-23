@@ -1,7 +1,9 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { headers } from "next/headers";
-import { notFound, redirect } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import {
     ArrowLeft,
     Crown,
@@ -15,101 +17,130 @@ import { normalizeCategoryName } from "@/lib/menuCategories";
 import WishlistInitialState from "@/components/menu/WishlistInitialState";
 import PizzaReviews from "@/components/reviews/PizzaReviews";
 
-export default async function PizzaDetailsPage({ params }) {
-    const { id } = await params;
-    const detailsPath = `/menu/${id}`;
+function StatusMessage({ title, message }) {
+    return (
+        <div className="mx-auto max-w-5xl px-6 py-24 text-center">
+            <h1 className="text-3xl font-bold">{title}</h1>
+            <p className="mt-3 text-gray-500">{message}</p>
+            <Link href="/menu" className="mt-6 inline-block text-[#C93425]">
+                Back to Menu
+            </Link>
+        </div>
+    );
+}
 
-    let authResponse;
-    let response;
+export default function PizzaDetailsPage() {
+    const params = useParams();
+    const router = useRouter();
+    const id = Array.isArray(params?.id) ? params.id[0] : params?.id;
+    const detailsPath = id ? `/menu/${id}` : "/menu";
 
-    try {
-        const requestHeaders = await headers();
-        const cookie = requestHeaders.get("cookie");
-        const forwardedHeaders = cookie ? { cookie } : {};
+    const [state, setState] = useState(() => ({
+        loading: Boolean(id),
+        profile: null,
+        pizza: null,
+        error: id ? null : "notFound",
+    }));
 
-        [authResponse, response] = await Promise.all([
-            apiFetch("/api/me", { headers: forwardedHeaders }),
-            apiFetch(`/api/menu/${encodeURIComponent(id)}`, {
-                headers: forwardedHeaders,
-            }),
-        ]);
-    } catch {
+    useEffect(() => {
+        if (!id) return;
+
+        const controller = new AbortController();
+
+        async function loadDetails() {
+            try {
+                const [authResponse, response] = await Promise.all([
+                    apiFetch("/api/me", { signal: controller.signal }),
+                    apiFetch(`/api/menu/${encodeURIComponent(id)}`, {
+                        signal: controller.signal,
+                    }),
+                ]);
+
+                if (controller.signal.aborted) return;
+
+                if (authResponse.status === 401 || response.status === 401) {
+                    router.replace(
+                        `/login?callbackUrl=${encodeURIComponent(detailsPath)}`
+                    );
+                    return;
+                }
+
+                if (authResponse.status === 403 || response.status === 403) {
+                    setState({ loading: false, profile: null, pizza: null, error: "forbidden" });
+                    return;
+                }
+
+                if (response.status === 404) {
+                    setState({ loading: false, profile: null, pizza: null, error: "notFound" });
+                    return;
+                }
+
+                if (!authResponse.ok || !response.ok) {
+                    setState({ loading: false, profile: null, pizza: null, error: "unavailable" });
+                    return;
+                }
+
+                const [authData, pizzaData] = await Promise.all([
+                    authResponse.json(),
+                    response.json(),
+                ]);
+
+                if (controller.signal.aborted) return;
+
+                setState({
+                    loading: false,
+                    profile: authData.user,
+                    pizza: pizzaData,
+                    error: null,
+                });
+            } catch {
+                if (!controller.signal.aborted) {
+                    setState({ loading: false, profile: null, pizza: null, error: "network" });
+                }
+            }
+        }
+
+        loadDetails();
+
+        return () => controller.abort();
+    }, [id, detailsPath, router]);
+
+    if (state.loading) {
         return (
-            <div className="mx-auto max-w-5xl px-6 py-24 text-center">
-                <h1 className="text-3xl font-bold">Unable to load pizza</h1>
-                <p className="mt-3 text-gray-500">
-                    The menu service is unavailable. Please try again.
-                </p>
-                <Link href="/menu" className="mt-6 inline-block text-[#C93425]">
-                    Back to Menu
-                </Link>
+            <div className="mx-auto max-w-5xl px-6 py-24 text-center text-gray-500">
+                Loading pizza details...
             </div>
         );
     }
 
-    if (authResponse.status === 401 || response.status === 401) {
-        redirect(
-            `/login?callbackUrl=${encodeURIComponent(detailsPath)}`
-        );
-    }
-
-    if (authResponse.status === 403 || response.status === 403) {
+    if (state.error === "notFound") {
         return (
-            <div className="mx-auto max-w-5xl px-6 py-24 text-center">
-                <h1 className="text-3xl font-bold">Account unavailable</h1>
-                <p className="mt-3 text-gray-500">
-                    Your account cannot access pizza details right now.
-                </p>
-                <Link href="/menu" className="mt-6 inline-block text-[#C93425]">
-                    Back to Menu
-                </Link>
-            </div>
+            <StatusMessage
+                title="Pizza not found"
+                message="This pizza does not exist or has not been approved."
+            />
         );
     }
 
-    if (response.status === 404) {
-        notFound();
-    }
-
-    if (!authResponse.ok || !response.ok) {
+    if (state.error === "forbidden") {
         return (
-            <div className="mx-auto max-w-5xl px-6 py-24 text-center">
-                <h1 className="text-3xl font-bold">Unable to load pizza</h1>
-                <p className="mt-3 text-gray-500">
-                    This pizza is unavailable or has not been approved.
-                </p>
-                <Link href="/menu" className="mt-6 inline-block text-[#C93425]">
-                    Back to Menu
-                </Link>
-            </div>
+            <StatusMessage
+                title="Account unavailable"
+                message="Your account cannot access pizza details right now."
+            />
         );
     }
 
-    let profile;
-    let pizza;
-
-    try {
-        const [authData, pizzaData] = await Promise.all([
-            authResponse.json(),
-            response.json(),
-        ]);
-
-        profile = authData.user;
-        pizza = pizzaData;
-    } catch {
+    if (state.error) {
         return (
-            <div className="mx-auto max-w-5xl px-6 py-24 text-center">
-                <h1 className="text-3xl font-bold">Unable to load pizza</h1>
-                <p className="mt-3 text-gray-500">
-                    The menu service returned an invalid response.
-                </p>
-                <Link href="/menu" className="mt-6 inline-block text-[#C93425]">
-                    Back to Menu
-                </Link>
-            </div>
+            <StatusMessage
+                title="Unable to load pizza"
+                message="The menu service is unavailable. Please try again."
+            />
         );
     }
 
+    const { profile, pizza } = state;
     const canOrder = profile?.role === "customer";
     const pizzaImages =
         Array.isArray(pizza.images) && pizza.images.length
@@ -149,7 +180,7 @@ export default async function PizzaDetailsPage({ params }) {
                                 >
                                     <Image
                                         src={src}
-                                        alt={`${pizza.name || "Pizza"} image ${index + 2}`}
+                                        alt={`Pizza image ${index + 2}`}
                                         width={240}
                                         height={180}
                                         unoptimized
